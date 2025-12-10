@@ -243,3 +243,56 @@ export const generateDescriptionOpenAI = async (
         throw new Error(error.message || "Ocorreu um erro ao gerar a descrição.");
     }
 };
+
+export const generateEmailOpenAI = async (
+    videoTitle: string,
+    videoDescription: string,
+    videoUrl: string
+): Promise<{ subject: string; body: string }> => {
+    try {
+        const prompt = `
+            Você é um especialista em Email Marketing e Copywriting.
+            Sua tarefa é criar um e-mail curto, persuasivo e que gere desejo para convidar a lista de contatos a assistir um novo vídeo no YouTube.
+
+            Título do Vídeo: "${videoTitle}"
+            Descrição do Vídeo: "${videoDescription}"
+            Link do Vídeo: "${videoUrl}"
+
+            Regras:
+            1. O e-mail deve ser pessoal, como se fosse escrito pelo criador do canal.
+            2. O objetivo é o clique no link.
+            3. Gere um Assunto (Subject) altamente clicável (curiosidade, benefício ou urgência).
+            4. O Corpo (Body) deve ter no máximo 3 parágrafos curtos.
+            5. Inclua o Link do Vídeo de forma clara no corpo do email (pode ser em um botão ou texto linkado, mas aqui retorne apenas o texto com a URL).
+            6. Use tags HTML simples para formatação se necessário (ex: <br>, <b>), mas mantenha limpo.
+
+            Responda APENAS um JSON com o formato:
+            {
+                "subject": "Assunto do Email",
+                "body": "Corpo do Email em HTML"
+            }
+        `;
+
+        const completion = await openai.chat.completions.create({
+            messages: [
+                { role: "system", content: "Você é um assistente útil que gera JSON." },
+                { role: "user", content: prompt }
+            ],
+            model: "gpt-4o",
+            response_format: { type: "json_object" }
+        });
+
+        const content = completion.choices[0].message.content;
+        if (!content) throw new Error("Resposta vazia da OpenAI.");
+
+        const jsonResponse = JSON.parse(content);
+        return {
+            subject: jsonResponse.subject,
+            body: jsonResponse.body
+        };
+
+    } catch (error: any) {
+        console.error("Erro na geração de email OpenAI:", error);
+        throw new Error(error.message || "Ocorreu um erro ao gerar o email.");
+    }
+};
