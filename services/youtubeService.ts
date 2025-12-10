@@ -1,25 +1,15 @@
-// --- START OF FILE services/youtubeService.ts ---
 import { Competitor, StatSnapshot } from '../types';
-import { getAccessToken, logout } from './authService';
+import { getAccessToken } from './authService';
 
 // --- CONFIGURAÇÃO DA API ---
-// Chave fixa no código (Client-side)
-let YOUTUBE_API_KEY = 'AIzaSyBYsoVEnQ9vwQUF4Y0Tf2yCyrx678CKbMo';
-
-if (typeof localStorage !== 'undefined') {
-    const stored = localStorage.getItem('yt_api_key_custom');
-    if (stored) YOUTUBE_API_KEY = stored;
-}
-
-const BASE_URL = 'https://www.googleapis.com/youtube/v3';
-const ANALYTICS_URL = 'https://youtubeanalytics.googleapis.com/v2/reports';
-
+// A chave agora está no backend (.env)
+// Mantemos as funções exportadas para compatibilidade, mas elas não fazem nada ou retornam dummy
 export const getYoutubeApiKey = (): string | null => {
-    return YOUTUBE_API_KEY;
+    return "BACKEND_MANAGED";
 };
 
 export const setYoutubeApiKey = (key: string) => {
-    YOUTUBE_API_KEY = key;
+    // No-op
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('yt_api_key_custom', key);
     }
@@ -37,7 +27,29 @@ export interface VideoData {
     subscribersGained?: number;
     estimatedRevenue?: number;
     privacyStatus?: string;
+    description?: string;
 }
+
+const ANALYTICS_URL = 'https://youtubeanalytics.googleapis.com/v2/reports';
+const PROXY_URL = 'http://localhost:8080/youtube/proxy';
+
+const fetchFromProxy = async (endpoint: string, params: Record<string, string>) => {
+    const url = new URL(PROXY_URL);
+    url.searchParams.append('endpoint', endpoint);
+    Object.keys(params).forEach(key => {
+        if (params[key] !== undefined && params[key] !== null) {
+            url.searchParams.append(key, params[key]);
+        }
+    });
+
+    const res = await fetch(url.toString());
+    if (!res.ok) {
+        const text = await res.text();
+        console.error(`Proxy Error (${endpoint}):`, text);
+        throw new Error(`Erro na API do YouTube (Proxy): ${text}`);
+    }
+    return await res.json();
+};
 
 const extractChannelIdentifier = (input: string): { type: 'id' | 'handle' | 'search', value: string } => {
     let cleaned = input.trim();
@@ -57,9 +69,6 @@ const extractChannelIdentifier = (input: string): { type: 'id' | 'handle' | 'sea
 };
 
 export const fetchYoutubeChannelData = async (input: string): Promise<{ competitor: Partial<Competitor>, stats: Omit<StatSnapshot, 'id'>, uploadsPlaylistId?: string, avatarUrl?: string } | null> => {
-    const apiKey = getYoutubeApiKey();
-    if (!apiKey) throw new Error("Chave de API não configurada.");
-
     const { type, value } = extractChannelIdentifier(input);
 
     let items: any[] = [];
@@ -67,16 +76,18 @@ export const fetchYoutubeChannelData = async (input: string): Promise<{ competit
     // 1. Try Direct Lookup
     if (type === 'id' && value.startsWith('UC')) {
         try {
-            const url = `${BASE_URL}/channels?part=snippet,statistics,contentDetails&id=${value}&key=${apiKey}`;
-            const res = await fetch(url);
-            const data = await res.json();
+            const data = await fetchFromProxy('channels', {
+                part: 'snippet,statistics,contentDetails',
+                id: value
+            });
             if (data.items) items = data.items;
         } catch (e) { console.warn("ID lookup warning:", e); }
     } else if (type === 'handle') {
         try {
-            const url = `${BASE_URL}/channels?part=snippet,statistics,contentDetails&forHandle=${encodeURIComponent(value)}&key=${apiKey}`;
-            const res = await fetch(url);
-            const data = await res.json();
+            const data = await fetchFromProxy('channels', {
+                part: 'snippet,statistics,contentDetails',
+                forHandle: value
+            });
             if (data.items) items = data.items;
         } catch (e) { console.warn("Handle lookup warning:", e); }
     }
@@ -84,15 +95,19 @@ export const fetchYoutubeChannelData = async (input: string): Promise<{ competit
     // 2. Fallback to Search if direct lookup yielded no results
     if (items.length === 0) {
         try {
-            const searchUrl = `${BASE_URL}/search?part=id&q=${encodeURIComponent(value)}&type=channel&maxResults=1&key=${apiKey}`;
-            const searchRes = await fetch(searchUrl);
-            const searchData = await searchRes.json();
+            const searchData = await fetchFromProxy('search', {
+                part: 'id',
+                q: value,
+                type: 'channel',
+                maxResults: '1'
+            });
 
             if (searchData.items && searchData.items.length > 0) {
                 const channelId = searchData.items[0].id.channelId;
-                const detailsUrl = `${BASE_URL}/channels?part=snippet,statistics,contentDetails&id=${channelId}&key=${apiKey}`;
-                const detailsRes = await fetch(detailsUrl);
-                const detailsData = await detailsRes.json();
+                const detailsData = await fetchFromProxy('channels', {
+                    part: 'snippet,statistics,contentDetails',
+                    id: channelId
+                });
                 if (detailsData.items) items = detailsData.items;
             }
         } catch (error) {
@@ -128,11 +143,13 @@ export const fetchYoutubeChannelData = async (input: string): Promise<{ competit
     };
 };
 
-const fetchVideoDetailsByIds = async (videoIds: string[], apiKey: string): Promise<VideoData[]> => {
+const fetchVideoDetailsByIds = async (videoIds: string[]): Promise<VideoData[]> => {
     if (videoIds.length === 0) return [];
-    const statsUrl = `${BASE_URL}/videos?part=snippet,statistics&id=${videoIds.join(',')}&key=${apiKey}`;
-    const statsRes = await fetch(statsUrl);
-    const statsData = await statsRes.json();
+
+    const statsData = await fetchFromProxy('videos', {
+        part: 'snippet,statistics',
+        id: videoIds.join(',')
+    });
 
     if (!statsData.items) return [];
 
@@ -143,14 +160,12 @@ const fetchVideoDetailsByIds = async (videoIds: string[], apiKey: string): Promi
         publishedAt: item.snippet.publishedAt,
         viewCount: parseInt(item.statistics.viewCount || '0'),
         likeCount: parseInt(item.statistics.likeCount || '0'),
-        commentCount: parseInt(item.statistics.commentCount || '0')
+        commentCount: parseInt(item.statistics.commentCount || '0'),
+        description: item.snippet.description
     }));
 };
 
 export const fetchCompetitorContent = async (channelUrl: string, knownChannelId?: string, channelName?: string): Promise<{ topVideos: VideoData[], recentVideos: VideoData[] }> => {
-    const apiKey = getYoutubeApiKey();
-    if (!apiKey) return { topVideos: [], recentVideos: [] };
-
     try {
         let channelId = knownChannelId;
 
@@ -164,20 +179,23 @@ export const fetchCompetitorContent = async (channelUrl: string, knownChannelId?
             const isUUID = value.length > 20 && value.includes('-') && !value.startsWith('UC');
 
             if (!isUUID) {
-                let lookupUrl = `${BASE_URL}/channels?part=id&key=${apiKey}`;
-                if (type === 'id') lookupUrl += `&id=${value}`;
-                else lookupUrl += `&forHandle=${encodeURIComponent(value)}`;
+                let params: any = { part: 'id' };
+                if (type === 'id') params.id = value;
+                else params.forHandle = value;
 
-                const channelRes = await fetch(lookupUrl);
-                const channelData = await channelRes.json();
+                const channelData = await fetchFromProxy('channels', params);
                 if (channelData.items?.[0]) {
                     channelId = channelData.items[0].id;
                 }
             }
 
             if (!channelId && channelName) {
-                const searchRes = await fetch(`${BASE_URL}/search?part=id&q=${encodeURIComponent(channelName)}&type=channel&maxResults=1&key=${apiKey}`);
-                const searchData = await searchRes.json();
+                const searchData = await fetchFromProxy('search', {
+                    part: 'id',
+                    q: channelName,
+                    type: 'channel',
+                    maxResults: '1'
+                });
                 if (searchData.items?.[0]) {
                     channelId = searchData.items[0].id.channelId;
                 }
@@ -190,43 +208,55 @@ export const fetchCompetitorContent = async (channelUrl: string, knownChannelId?
         }
 
         let uploadsId = '';
-        const chRes = await fetch(`${BASE_URL}/channels?part=contentDetails&id=${channelId}&key=${apiKey}`);
-        const chData = await chRes.json();
+        const chData = await fetchFromProxy('channels', {
+            part: 'contentDetails',
+            id: channelId
+        });
         if (chData.items?.[0]) {
             uploadsId = chData.items[0].contentDetails.relatedPlaylists.uploads;
         }
 
         let recentVideos: VideoData[] = [];
         if (uploadsId) {
-            const playlistUrl = `${BASE_URL}/playlistItems?part=snippet&playlistId=${uploadsId}&maxResults=10&key=${apiKey}`;
-            const playlistRes = await fetch(playlistUrl);
-            const playlistData = await playlistRes.json();
+            const playlistData = await fetchFromProxy('playlistItems', {
+                part: 'snippet',
+                playlistId: uploadsId,
+                maxResults: '10'
+            });
 
             if (playlistData.items) {
                 const recentIds = playlistData.items.map((i: any) => i.snippet.resourceId.videoId);
-                recentVideos = await fetchVideoDetailsByIds(recentIds, apiKey);
+                recentVideos = await fetchVideoDetailsByIds(recentIds);
             }
         }
 
         if (recentVideos.length === 0 && channelId) {
-            const searchUrl = `${BASE_URL}/search?part=id&channelId=${channelId}&order=date&maxResults=10&type=video&key=${apiKey}`;
-            const searchRes = await fetch(searchUrl);
-            const searchData = await searchRes.json();
+            const searchData = await fetchFromProxy('search', {
+                part: 'id',
+                channelId: channelId,
+                order: 'date',
+                maxResults: '10',
+                type: 'video'
+            });
             if (searchData.items) {
                 const recentIds = searchData.items.map((i: any) => i.id.videoId);
-                recentVideos = await fetchVideoDetailsByIds(recentIds, apiKey);
+                recentVideos = await fetchVideoDetailsByIds(recentIds);
             }
         }
 
         let topVideos: VideoData[] = [];
         if (channelId) {
-            const searchUrl = `${BASE_URL}/search?part=id&channelId=${channelId}&order=viewCount&maxResults=10&type=video&key=${apiKey}`;
-            const searchRes = await fetch(searchUrl);
-            const searchData = await searchRes.json();
+            const searchData = await fetchFromProxy('search', {
+                part: 'id',
+                channelId: channelId,
+                order: 'viewCount',
+                maxResults: '10',
+                type: 'video'
+            });
 
             if (searchData.items) {
                 const topIds = searchData.items.map((i: any) => i.id.videoId);
-                topVideos = await fetchVideoDetailsByIds(topIds, apiKey);
+                topVideos = await fetchVideoDetailsByIds(topIds);
             }
         }
 
@@ -239,10 +269,9 @@ export const fetchCompetitorContent = async (channelUrl: string, knownChannelId?
 
 export const fetchTopVideosFromAnalytics = async (startDate: string, endDate: string): Promise<VideoData[]> => {
     let token = await getAccessToken();
-    const apiKey = getYoutubeApiKey();
 
     // If no token initially, just return empty, let the UI handle "Restricted" state
-    if (!token || !apiKey) return [];
+    if (!token) return [];
 
     const fetchAnalytics = async (authToken: string, metrics: string) => {
         const start = startDate.split('T')[0];
@@ -312,9 +341,11 @@ export const fetchTopVideosFromAnalytics = async (startDate: string, endDate: st
             });
         });
 
-        const videosUrl = `${BASE_URL}/videos?part=snippet,status&id=${videoIds.join(',')}&key=${apiKey}`;
-        const metaRes = await fetch(videosUrl);
-        const metaData = await metaRes.json();
+        // Use Proxy for Metadata
+        const metaData = await fetchFromProxy('videos', {
+            part: 'snippet,status',
+            id: videoIds.join(',')
+        });
 
         if (!metaData.items) return [];
 
@@ -326,6 +357,7 @@ export const fetchTopVideosFromAnalytics = async (startDate: string, endDate: st
                 thumbnail: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
                 publishedAt: item.snippet.publishedAt,
                 privacyStatus: item.status?.privacyStatus,
+                description: item.snippet.description,
                 ...stats
             };
         });
