@@ -75,13 +75,13 @@ export const EmailGenerationModal: React.FC<EmailGenerationModalProps> = ({ vide
 
             if (!res.ok) {
                 const err = await res.json();
-                throw new Error(err.error || "Erro ao enviar teste");
+                throw new Error(err.message || err.error || "Erro desconhecido ao enviar teste");
             }
 
             alert(`Email de teste enviado para ${testEmail}!`);
         } catch (error: any) {
             console.error("Error sending test email:", error);
-            alert(`Erro ao enviar teste: ${error.message}`);
+            alert(`Erro ao enviar teste: ${error.message || JSON.stringify(error)}`);
         } finally {
             setIsSendingTest(false);
         }
