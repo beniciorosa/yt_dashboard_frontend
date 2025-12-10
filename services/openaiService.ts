@@ -4,7 +4,7 @@ export interface GeneratedContent {
     hashtags: string;
 }
 
-const BACKEND_URL = 'http://localhost:8080/openai';
+const BACKEND_URL = 'https://yt-dashboard-backend.vercel.app/openai';
 
 export const transcribeAudioOpenAI = async (file: File): Promise<string> => {
     try {

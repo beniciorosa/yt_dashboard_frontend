@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:8080/api/active-campaign'; // Assuming local dev, should be relative or configured
+const API_BASE = 'https://yt-dashboard-backend.vercel.app/api/active-campaign';
 
 export interface ACList {
     id: string;
