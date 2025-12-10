@@ -36,6 +36,7 @@ export interface VideoData {
     estimatedMinutesWatched?: number;
     subscribersGained?: number;
     estimatedRevenue?: number;
+    privacyStatus?: string;
 }
 
 const extractChannelIdentifier = (input: string): { type: 'id' | 'handle' | 'search', value: string } => {
@@ -311,7 +312,7 @@ export const fetchTopVideosFromAnalytics = async (startDate: string, endDate: st
             });
         });
 
-        const videosUrl = `${BASE_URL}/videos?part=snippet&id=${videoIds.join(',')}&key=${apiKey}`;
+        const videosUrl = `${BASE_URL}/videos?part=snippet,status&id=${videoIds.join(',')}&key=${apiKey}`;
         const metaRes = await fetch(videosUrl);
         const metaData = await metaRes.json();
 
@@ -324,6 +325,7 @@ export const fetchTopVideosFromAnalytics = async (startDate: string, endDate: st
                 title: item.snippet.title,
                 thumbnail: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
                 publishedAt: item.snippet.publishedAt,
+                privacyStatus: item.status?.privacyStatus,
                 ...stats
             };
         });

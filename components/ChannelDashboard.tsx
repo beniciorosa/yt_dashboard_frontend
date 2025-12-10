@@ -8,7 +8,7 @@ import { Loader2, TrendingUp, DollarSign, Eye, Video, User, RefreshCw, Filter, A
 import { VideoDetailsPanel } from './VideoDetailsPanel';
 
 type DateFilterOption = '7d' | '14d' | '28d' | '60d' | '90d' | '365d' | 'all' | 'custom';
-type SortKey = 'viewCount' | 'publishedAt' | 'likeCount' | 'commentCount' | 'estimatedRevenue';
+type SortKey = 'viewCount' | 'publishedAt' | 'likeCount' | 'commentCount' | 'estimatedRevenue' | 'estimatedMinutesWatched' | 'subscribersGained';
 type SortDirection = 'asc' | 'desc';
 
 interface Props {
@@ -121,6 +121,9 @@ export const ChannelDashboard: React.FC<Props> = ({ isLoggedIn }) => {
             const query = searchQuery.toLowerCase();
             list = list.filter(v => v.title.toLowerCase().includes(query));
         }
+
+        // Filter by Privacy Status (Only Public)
+        list = list.filter(v => v.privacyStatus === 'public');
 
         list.sort((a, b) => {
             let valA: number | string = 0;
@@ -367,8 +370,11 @@ export const ChannelDashboard: React.FC<Props> = ({ isLoggedIn }) => {
                                 >
                                     <div className="flex items-center gap-1">Views <SortIcon colKey="viewCount" /></div>
                                 </th>
-                                <th className="px-6 py-3 text-left text-gray-700 dark:text-gray-300">
-                                    <div className="flex items-center gap-1">Tempo Exib. (h)</div>
+                                <th
+                                    className="px-6 py-3 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                    onClick={() => handleSort('estimatedMinutesWatched')}
+                                >
+                                    <div className="flex items-center gap-1">Tempo Exib. (h) <SortIcon colKey="estimatedMinutesWatched" /></div>
                                 </th>
                                 <th
                                     className="px-6 py-3 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -382,8 +388,11 @@ export const ChannelDashboard: React.FC<Props> = ({ isLoggedIn }) => {
                                 >
                                     <div className="flex items-center gap-1">Comentários <SortIcon colKey="commentCount" /></div>
                                 </th>
-                                <th className="px-6 py-3 text-left text-gray-700 dark:text-gray-300">
-                                    <div className="flex items-center gap-1">Inscritos</div>
+                                <th
+                                    className="px-6 py-3 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                    onClick={() => handleSort('subscribersGained')}
+                                >
+                                    <div className="flex items-center gap-1">Inscritos <SortIcon colKey="subscribersGained" /></div>
                                 </th>
                                 <th
                                     className="px-6 py-3 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
