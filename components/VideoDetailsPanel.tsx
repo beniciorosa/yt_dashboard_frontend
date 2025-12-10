@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, TrendingUp, Users, Globe, Clock, DollarSign, Eye, ThumbsUp, MessageCircle, UserPlus, Calendar, BarChart2 } from 'lucide-react';
+import { X, TrendingUp, Users, Globe, Clock, DollarSign, Eye, ThumbsUp, MessageCircle, UserPlus, Calendar, BarChart2, Filter } from 'lucide-react';
 import { VideoData, fetchVideoDemographics, fetchVideoTrafficSources, fetchVideoDailyMetrics } from '../services/youtubeService';
 import { Line } from 'react-chartjs-2';
 import {
@@ -32,25 +32,49 @@ interface VideoDetailsPanelProps {
     dateRange: { start: Date, end: Date };
 }
 
+type PeriodOption = '7d' | '14d' | '28d' | 'since_upload';
+
 export const VideoDetailsPanel: React.FC<VideoDetailsPanelProps> = ({ video, isOpen, onClose, dateRange }) => {
     const [loading, setLoading] = useState(false);
     const [demographics, setDemographics] = useState<{ age: any[], gender: any[] } | null>(null);
     const [trafficSources, setTrafficSources] = useState<any[]>([]);
     const [dailyMetrics, setDailyMetrics] = useState<{ rows: any[], hasRevenue: boolean }>({ rows: [], hasRevenue: false });
     const [activeTab, setActiveTab] = useState<'overview' | 'audience' | 'traffic'>('overview');
+    const [period, setPeriod] = useState<PeriodOption>('28d');
 
     useEffect(() => {
         if (isOpen && video) {
             loadDetails();
         }
-    }, [isOpen, video]);
+    }, [isOpen, video, period]);
 
     const loadDetails = async () => {
         if (!video) return;
         setLoading(true);
 
-        const startStr = dateRange.start.toISOString();
-        const endStr = dateRange.end.toISOString();
+        const getEffectiveDateRange = () => {
+            const end = new Date();
+            const start = new Date();
+            const publishDate = new Date(video.publishedAt);
+
+            if (period === 'since_upload') {
+                return { start: publishDate, end };
+            }
+
+            const days = parseInt(period.replace('d', ''));
+            start.setDate(end.getDate() - days);
+
+            // Clamp to publish date if calculated start is before publish date
+            if (start < publishDate) {
+                return { start: publishDate, end };
+            }
+
+            return { start, end };
+        };
+
+        const { start, end } = getEffectiveDateRange();
+        const startStr = start.toISOString();
+        const endStr = end.toISOString();
 
         try {
             const [demoData, trafficData, dailyData] = await Promise.all([
@@ -228,7 +252,7 @@ export const VideoDetailsPanel: React.FC<VideoDetailsPanelProps> = ({ video, isO
                                                 <UserPlus size={14} /> Inscritos
                                             </div>
                                             <div className="text-xl font-bold text-slate-900 dark:text-white">
-                                                {video.subscribersGained !== undefined ? video.subscribersGained : '-'}
+                                                {video.subscribersGained !== undefined ? new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(video.subscribersGained) : '-'}
                                             </div>
                                         </div>
                                         <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
@@ -273,6 +297,19 @@ export const VideoDetailsPanel: React.FC<VideoDetailsPanelProps> = ({ video, isO
                                             <BarChart2 size={16} className="text-blue-500" />
                                             Desempenho Diário
                                         </h3>
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <Filter size={16} className="text-gray-400" />
+                                            <select
+                                                value={period}
+                                                onChange={(e) => setPeriod(e.target.value as PeriodOption)}
+                                                className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1 outline-none cursor-pointer"
+                                            >
+                                                <option value="7d">Últimos 7 dias</option>
+                                                <option value="14d">Últimos 14 dias</option>
+                                                <option value="28d">Últimos 28 dias</option>
+                                                <option value="since_upload">Desde a postagem</option>
+                                            </select>
+                                        </div>
                                         <div className="h-64 w-full">
                                             {dailyMetrics.rows.length > 0 ? (
                                                 <Line data={chartData} options={chartOptions} />
