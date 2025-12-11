@@ -345,9 +345,12 @@ export const DescriptionGenerator: React.FC = () => {
                         Arquivo: <span className="font-semibold text-slate-700 dark:text-slate-200">{fileData.fileName}</span>
                       </div>
                       <button
-                        onClick={handleUploadAndProcess}
+                        onClick={() => {
+                          console.log("Transcrever Áudio (Whisper)", fileData.file);
+                          handleUploadAndProcess();
+                        }}
                         className="group relative inline-flex items-center justify-center px-8 py-3.5 text-lg font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 rounded-full shadow-lg transition-all hover:scale-[1.02]"
-                      > console.log("Transcrever Áudio (Whisper)", fileData.file);
+                      >
                         Transcrever Áudio (Whisper)
                         <ArrowRight className="w-5 h-5 ml-2" />
                       </button>
