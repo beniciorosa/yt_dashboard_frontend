@@ -11,6 +11,13 @@ interface EmailGenerationModalProps {
 }
 
 export const EmailGenerationModal: React.FC<EmailGenerationModalProps> = ({ video, isOpen, onClose }) => {
+    // Sender details state
+    const [senderDetails, setSenderDetails] = useState({
+        fromname: '',
+        fromemail: '',
+        reply2: ''
+    });
+
     // Steps: 'editing' (default now), 'sending', 'success'
     const [emailStep, setEmailStep] = useState<'editing' | 'sending' | 'success'>('editing');
     const [emailData, setEmailData] = useState<{ subject: string; body: string }>({ subject: '', body: '' });
@@ -23,10 +30,16 @@ export const EmailGenerationModal: React.FC<EmailGenerationModalProps> = ({ vide
     useEffect(() => {
         if (isOpen && video) {
             loadEmailData();
-            // Pre-fill with template instead of AI generation
+            // Pre-fill with template
             setEmailData({
                 subject: `Novo Vídeo: ${video.title}`,
                 body: `Olá,\n\nAcabei de publicar um novo vídeo no canal: <b>${video.title}</b>\n\n${video.description ? video.description.substring(0, 150) + '...' : ''}\n\n<a href="https://www.youtube.com/watch?v=${video.id}" style="display: inline-block; background-color: #ef4444; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Assistir Agora</a>\n\nEspero que goste!\n\nAbraços.`
+            });
+            // You might want to default these to something verified in AC or load from local storage
+            setSenderDetails({
+                fromname: 'Seu Nome',
+                fromemail: 'seu@email.com',
+                reply2: 'seu@email.com'
             });
             setEmailStep('editing');
         }
@@ -40,11 +53,22 @@ export const EmailGenerationModal: React.FC<EmailGenerationModalProps> = ({ vide
     };
 
     const handleSendCampaign = async () => {
+        if (!senderDetails.fromemail || !senderDetails.fromname) {
+            alert("Preencha o Nome e Email do Remetente.");
+            return;
+        }
         if (!confirm("Tem certeza que deseja enviar esta campanha para a lista selecionada?")) return;
 
         setEmailStep('sending');
         try {
-            await sendCampaign(emailData.subject, emailData.body, selectedList);
+            await sendCampaign(
+                emailData.subject,
+                emailData.body,
+                selectedList,
+                senderDetails.fromname,
+                senderDetails.fromemail,
+                senderDetails.reply2
+            );
             setEmailStep('success');
             loadEmailData(); // Refresh reports
         } catch (error) {
@@ -173,21 +197,54 @@ export const EmailGenerationModal: React.FC<EmailGenerationModalProps> = ({ vide
                                 <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-100 dark:border-slate-700">
                                     <h3 className="font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                                         <Send size={18} className="text-green-600" />
-                                        Envio Oficial
+                                        Configuração de Envio
                                     </h3>
 
-                                    <div className="mb-4">
-                                        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Lista de Destinatários</label>
-                                        <select
-                                            value={selectedList}
-                                            onChange={(e) => setSelectedList(e.target.value)}
-                                            className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white text-sm"
-                                        >
-                                            <option value="all">Todas as Listas</option>
-                                            {acLists.map(list => (
-                                                <option key={list.id} value={list.id}>{list.name}</option>
-                                            ))}
-                                        </select>
+                                    <div className="space-y-3 mb-4">
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Nome do Remetente</label>
+                                            <input
+                                                type="text"
+                                                value={senderDetails.fromname}
+                                                onChange={(e) => setSenderDetails({ ...senderDetails, fromname: e.target.value })}
+                                                className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white text-sm"
+                                                placeholder="Ex: Seu Nome"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Email do Remetente</label>
+                                            <input
+                                                type="email"
+                                                value={senderDetails.fromemail}
+                                                onChange={(e) => setSenderDetails({ ...senderDetails, fromemail: e.target.value })}
+                                                className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white text-sm"
+                                                placeholder="Ex: email@dominio.com"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Reply-To (Opcional)</label>
+                                            <input
+                                                type="email"
+                                                value={senderDetails.reply2}
+                                                onChange={(e) => setSenderDetails({ ...senderDetails, reply2: e.target.value })}
+                                                className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white text-sm"
+                                                placeholder="Ex: suporte@dominio.com"
+                                            />
+                                        </div>
+
+                                        <div className="pt-2 border-t border-slate-200 dark:border-slate-700 mt-2">
+                                            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Lista de Destinatários</label>
+                                            <select
+                                                value={selectedList}
+                                                onChange={(e) => setSelectedList(e.target.value)}
+                                                className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white text-sm"
+                                            >
+                                                <option value="all">Todas as Listas</option>
+                                                {acLists.map(list => (
+                                                    <option key={list.id} value={list.id}>{list.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
                                     </div>
 
                                     <button

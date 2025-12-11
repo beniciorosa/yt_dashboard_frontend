@@ -33,12 +33,12 @@ export const getLists = async (): Promise<ACList[]> => {
     }
 };
 
-export const sendCampaign = async (subject: string, body: string, listId: string): Promise<{ success: boolean, campaignId?: string }> => {
+export const sendCampaign = async (subject: string, body: string, listId: string, fromname: string, fromemail: string, reply2: string): Promise<{ success: boolean, campaignId?: string }> => {
     try {
         const res = await fetch(`${API_BASE}/send`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ subject, body, listId })
+            body: JSON.stringify({ subject, body, listId, fromname, fromemail, reply2 })
         });
         if (!res.ok) {
             const err = await res.json();
