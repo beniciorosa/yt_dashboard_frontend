@@ -4,6 +4,7 @@ import ConfigurationForm, { DescriptionConfigData } from './DescriptionGenerator
 import DescriptionResult from './DescriptionGenerator/TranscriptionResult';
 import HistoryModal from './DescriptionGenerator/HistoryModal';
 import { transcribeAudioOpenAI, generateDescriptionOpenAI, GeneratedContent } from '../services/openaiService';
+import { supabase } from '../services/supabaseClient';
 import { saveProject, ProjectRow } from '../services/descriptionStorage';
 import { downloadTextFile } from '../utils/fileHelpers';
 import { Loader2, ArrowRight, Info, Sparkles, AlertTriangle, CheckCircle2, FileText, ChevronDown, ChevronUp, Download, FolderOpen } from 'lucide-react';
@@ -125,22 +126,55 @@ export const DescriptionGenerator: React.FC = () => {
   };
 
   // Step 1: Transcrever Áudio com Whisper (OpenAI)
+  const uploadToSupabase = async (file: File): Promise<string> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('temp-uploads')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data, error: urlError } = await supabase.storage
+        .from('temp-uploads')
+        .createSignedUrl(filePath, 60 * 10); // 10 minutes
+
+      if (urlError) throw urlError;
+
+      return data.signedUrl;
+    } catch (error) {
+      console.error('Error uploading to Supabase:', error);
+      throw new Error('Falha ao fazer upload do arquivo.');
+    }
+  };
+
+  // Step 1: Transcrever Áudio com Whisper (OpenAI)
   const handleUploadAndProcess = async () => {
     if (!fileData?.file) return;
 
     setIsProcessing(true);
     setError(null);
     setProgress(10);
-    setStatusMessage("Enviando para OpenAI Whisper...");
+    setStatusMessage("Enviando para Storage...");
 
     try {
+      // 1. Upload to Supabase Storage
+      const fileUrl = await uploadToSupabase(fileData.file);
+      console.log("File uploaded, signed URL:", fileUrl);
+
+      setStatusMessage("Enviando para OpenAI Whisper...");
+      setProgress(30);
+
       // Simula progresso visual enquanto aguarda a promise
       const fakeProgress = setInterval(() => {
         setProgress(old => (old < 80 ? old + 5 : old));
       }, 500);
 
-      // Chamada real para OpenAI Whisper
-      const text = await transcribeAudioOpenAI(fileData.file);
+      // Chamada real para OpenAI Whisper (agora enviando URL)
+      const text = await transcribeAudioOpenAI(fileUrl);
 
       clearInterval(fakeProgress);
       setProgress(100);
