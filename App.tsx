@@ -5,6 +5,7 @@ import { CompetitorsModule } from './components/CompetitorsModule';
 import { ChannelDashboard } from './components/ChannelDashboard';
 import { DescriptionGenerator } from './components/DescriptionGenerator';
 import { SettingsModal } from './components/SettingsModal';
+import { UtmGenerator } from './components/UtmGenerator';
 import { handleAuthCallback, initiateLogin, logout, isAuthenticated, getAccessToken } from './services/authService';
 import { Loader2, Wrench } from 'lucide-react';
 
@@ -13,7 +14,7 @@ const App: React.FC = () => {
   const [activeModule, setActiveModule] = useState<'dashboard' | 'competitors' | 'description-gen' | 'utm-gen'>('competitors');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  
+
   // Theme State
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof localStorage !== 'undefined') {
@@ -46,113 +47,109 @@ const App: React.FC = () => {
     authCheckRan.current = true;
 
     const checkAuth = async () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
-        
-        // 1. Check if we already have a potentially valid session
-        // This check avoids re-exchanging a stale code if a session exists
-        const existingToken = await getAccessToken(); 
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
 
-        if (code) {
-            // Remove code from URL immediately to prevent reuse attempts visual clutter
-            window.history.replaceState({}, document.title, window.location.pathname);
-            
-            // If we already have a valid token (not expired), skip the code exchange
-            // This happens if the user reloads the page before the URL is cleaned or double-fired
-            if (existingToken) {
-                console.log("Valid session found, ignoring auth code.");
-                setIsLoggedIn(true);
-                setActiveModule('dashboard');
-                setIsAuthProcessing(false);
-                return;
-            }
+      // 1. Check if we already have a potentially valid session
+      // This check avoids re-exchanging a stale code if a session exists
+      const existingToken = await getAccessToken();
 
-            const success = await handleAuthCallback(code);
-            if (success) {
-                setIsLoggedIn(true);
-                setActiveModule('dashboard'); 
-            } else {
-                alert('Falha na autenticação com Google. Tente novamente.');
-            }
-        } else {
-            setIsLoggedIn(isAuthenticated());
+      if (code) {
+        // Remove code from URL immediately to prevent reuse attempts visual clutter
+        window.history.replaceState({}, document.title, window.location.pathname);
+
+        // If we already have a valid token (not expired), skip the code exchange
+        // This happens if the user reloads the page before the URL is cleaned or double-fired
+        if (existingToken) {
+          console.log("Valid session found, ignoring auth code.");
+          setIsLoggedIn(true);
+          setActiveModule('dashboard');
+          setIsAuthProcessing(false);
+          return;
         }
-        setIsAuthProcessing(false);
+
+        const success = await handleAuthCallback(code);
+        if (success) {
+          setIsLoggedIn(true);
+          setActiveModule('dashboard');
+        } else {
+          alert('Falha na autenticação com Google. Tente novamente.');
+        }
+      } else {
+        setIsLoggedIn(isAuthenticated());
+      }
+      setIsAuthProcessing(false);
     };
 
     checkAuth();
   }, []);
 
   const handleLogin = () => {
-      initiateLogin();
+    initiateLogin();
   };
 
   const handleLogout = () => {
-      logout();
-      setIsLoggedIn(false);
-      setIsSettingsOpen(false);
+    logout();
+    setIsLoggedIn(false);
+    setIsSettingsOpen(false);
   };
 
   if (isAuthProcessing) {
-      return (
-          <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
-              <Loader2 className="animate-spin text-blue-600 mb-4" size={40} />
-              <h2 className="text-gray-600 dark:text-gray-300 font-medium">Carregando...</h2>
-          </div>
-      );
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <Loader2 className="animate-spin text-blue-600 mb-4" size={40} />
+        <h2 className="text-gray-600 dark:text-gray-300 font-medium">Carregando...</h2>
+      </div>
+    );
   }
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-200">
       {/* Sidebar */}
-      <Sidebar 
-        activeModule={activeModule} 
-        onNavigate={setActiveModule} 
-        isCollapsed={isSidebarCollapsed} 
+      <Sidebar
+        activeModule={activeModule}
+        onNavigate={setActiveModule}
+        isCollapsed={isSidebarCollapsed}
         toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        
+
         {/* Top Bar */}
         <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 sticky top-0 z-20 transition-colors duration-200">
-            <h2 className="text-lg font-semibold text-gray-700 dark:text-white">
-                {activeModule === 'dashboard' && 'Dashboard do Canal'}
-                {activeModule === 'competitors' && 'Ferramentas de YouTube'}
-                {activeModule === 'description-gen' && 'Gerador de Descrição'}
-                {activeModule === 'utm-gen' && 'Gerador de UTM'}
-            </h2>
-            <div className="flex items-center gap-4">
-               <span className="text-xs text-gray-400 hidden md:inline">v1.8.2</span>
-            </div>
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-white">
+            {activeModule === 'dashboard' && 'Dashboard do Canal'}
+            {activeModule === 'competitors' && 'Ferramentas de YouTube'}
+            {activeModule === 'description-gen' && 'Gerador de Descrição'}
+            {activeModule === 'utm-gen' && 'Gerador de UTM'}
+          </h2>
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-gray-400 hidden md:inline">v1.8.2</span>
+          </div>
         </header>
 
         {/* Module Content */}
         <main className="p-6 lg:p-8 flex-1 overflow-y-auto">
-            {activeModule === 'competitors' && <CompetitorsModule />}
-            
-            {activeModule === 'dashboard' && (
-                <ChannelDashboard isLoggedIn={isLoggedIn} />
-            )}
+          {activeModule === 'competitors' && <CompetitorsModule />}
 
-            {activeModule === 'description-gen' && (
-                <DescriptionGenerator />
-            )}
-            
-            {activeModule === 'utm-gen' && (
-                <div className="flex flex-col items-center justify-center h-full text-center text-gray-400 dark:text-gray-500">
-                    <Wrench size={48} className="mb-4 opacity-50" />
-                    <p className="text-lg font-medium">Ferramenta em desenvolvimento</p>
-                    <p className="text-sm">Esta funcionalidade estará disponível em breve.</p>
-                </div>
-            )}
+          {activeModule === 'dashboard' && (
+            <ChannelDashboard isLoggedIn={isLoggedIn} />
+          )}
+
+          {activeModule === 'description-gen' && (
+            <DescriptionGenerator />
+          )}
+
+          {activeModule === 'utm-gen' && (
+            <UtmGenerator />
+          )}
         </main>
       </div>
 
       {isSettingsOpen && (
-        <SettingsModal 
+        <SettingsModal
           onClose={() => setIsSettingsOpen(false)}
           isLoggedIn={isLoggedIn}
           onLogin={handleLogin}
