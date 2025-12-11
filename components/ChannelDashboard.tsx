@@ -4,9 +4,9 @@ import { fetchMyChannel } from '../services/storageService';
 import { fetchYoutubeChannelData, fetchTopVideosFromAnalytics, VideoData } from '../services/youtubeService';
 import { Competitor } from '../types';
 import { logout } from '../services/authService';
-import { Loader2, TrendingUp, DollarSign, Eye, Video, User, RefreshCw, Filter, ArrowUpDown, ArrowUp, ArrowDown, AlertCircle, Lock, LogOut, Search, BarChart2, Mail } from 'lucide-react';
+import { Loader2, TrendingUp, DollarSign, Eye, Video, User, RefreshCw, Filter, ArrowUpDown, ArrowUp, ArrowDown, AlertCircle, Lock, LogOut, Search, BarChart2 } from 'lucide-react';
 import { VideoDetailsPanel } from './VideoDetailsPanel';
-import { EmailGenerationModal } from './EmailGenerationModal';
+
 
 type DateFilterOption = '7d' | '14d' | '28d' | '60d' | '90d' | '365d' | 'all' | 'custom';
 type SortKey = 'viewCount' | 'publishedAt' | 'likeCount' | 'commentCount' | 'estimatedRevenue' | 'estimatedMinutesWatched' | 'subscribersGained';
@@ -36,8 +36,7 @@ export const ChannelDashboard: React.FC<Props> = ({ isLoggedIn }) => {
 
     // Video Details Panel State
     const [selectedVideo, setSelectedVideo] = useState<VideoData | null>(null);
-    const [emailVideo, setEmailVideo] = useState<VideoData | null>(null);
-    const [isEmailOpen, setIsEmailOpen] = useState(false);
+
 
     const getDatesFromFilter = useCallback(() => {
         const end = new Date();
@@ -491,17 +490,7 @@ export const ChannelDashboard: React.FC<Props> = ({ isLoggedIn }) => {
 
                                         <td className="px-6 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setEmailVideo(video);
-                                                        setIsEmailOpen(true);
-                                                    }}
-                                                    className="p-2 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors"
-                                                    title="Gerar Email Marketing"
-                                                >
-                                                    <Mail size={20} />
-                                                </button>
+
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -539,11 +528,7 @@ export const ChannelDashboard: React.FC<Props> = ({ isLoggedIn }) => {
                 dateRange={getDatesFromFilter()}
             />
 
-            <EmailGenerationModal
-                video={emailVideo}
-                isOpen={isEmailOpen}
-                onClose={() => setIsEmailOpen(false)}
-            />
+
         </div>
     );
 };

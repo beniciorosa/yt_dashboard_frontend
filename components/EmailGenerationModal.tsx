@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Mail, TrendingUp, FileText, Send, CheckCircle, BarChart2, Link as LinkIcon, PlayCircle, ChevronRight, ChevronLeft, Calendar } from 'lucide-react';
 import { VideoData } from '../services/youtubeService';
 // import { generateEmailOpenAI } from '../services/openaiService'; // Disabled for now
-import { getLists, sendCampaign, getReports, ACList, ACCampaign } from '../services/activeCampaignService';
+import { getLists, sendCampaign, sendTestEmail, getReports, ACList, ACCampaign } from '../services/activeCampaignService';
 
 interface EmailGenerationModalProps {
     video: VideoData | null;
@@ -122,23 +122,11 @@ export const EmailGenerationModal: React.FC<EmailGenerationModalProps> = ({ vide
         }
         setIsSendingTest(true);
         try {
-            // Call backend to send test email
-            const BACKEND_URL = 'https://yt-dashboard-backend.vercel.app/api/active-campaign';
-            const res = await fetch(`${BACKEND_URL}/send-test`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    subject: `[TESTE] ${emailData.subject}`,
-                    body: emailData.body,
-                    emailTo: testEmail
-                })
-            });
-
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.message || err.error || "Erro desconhecido ao enviar teste");
-            }
-
+            await sendTestEmail(
+                `[TESTE] ${emailData.subject}`,
+                emailData.body,
+                testEmail
+            );
             alert(`Email de teste enviado para ${testEmail}!`);
         } catch (error: any) {
             console.error("Error sending test email:", error);
@@ -444,7 +432,7 @@ const StepsIndicator = ({ currentStep, totalSteps }: { currentStep: number, tota
                 <div
                     key={i}
                     className={`h-1.5 rounded-full transition-all duration-300 ${i + 1 === currentStep ? 'w-8 bg-blue-600' :
-                            i + 1 < currentStep ? 'w-4 bg-green-500' : 'w-4 bg-slate-200 dark:bg-slate-700'
+                        i + 1 < currentStep ? 'w-4 bg-green-500' : 'w-4 bg-slate-200 dark:bg-slate-700'
                         }`}
                 />
             ))}

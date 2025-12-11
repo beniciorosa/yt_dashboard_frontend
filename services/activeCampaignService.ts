@@ -1,4 +1,4 @@
-const API_BASE = 'https://yt-dashboard-backend.vercel.app/api/active-campaign';
+const API_BASE = 'http://localhost:8080/api/active-campaign'; // Pointing to local backend (NestJS default port 8080) for testing
 
 export interface ACList {
     id: string;
@@ -47,6 +47,24 @@ export const sendCampaign = async (subject: string, body: string, listId: string
         return await res.json();
     } catch (error) {
         console.error("Error sending campaign:", error);
+        throw error;
+    }
+};
+
+export const sendTestEmail = async (subject: string, body: string, emailTo: string): Promise<{ success: boolean, message?: string }> => {
+    try {
+        const res = await fetch(`${API_BASE}/send-test`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subject, body, emailTo })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.message || err.error || 'Failed to send test email');
+        }
+        return await res.json();
+    } catch (error) {
+        console.error("Error sending test email:", error);
         throw error;
     }
 };
