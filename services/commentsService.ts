@@ -215,8 +215,10 @@ export const rateComment = async (commentId: string, rating: 'like' | 'none'): P
     const res = await fetch(url, {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${token}`
-        }
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json' // Often required to avoid simple-request limitations or satisfy proxies
+        },
+        body: JSON.stringify({}) // Some endpoints require a body for POST
     });
 
     if (!res.ok) {

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { CommentThread, replyToComment, rateComment, deleteComment } from '../../services/commentsService';
 import { VideoData } from '../../services/youtubeService';
-import { MessageSquare, ThumbsUp, Trash2, CornerDownRight, MoreVertical, Heart, User, CheckCircle2, PlaySquare } from 'lucide-react';
-
+import { MessageSquare, ThumbsUp, Trash2, CornerDownRight, MoreVertical, PlaySquare, ExternalLink, Loader2 } from 'lucide-react';
 
 interface Props {
     thread: CommentThread;
@@ -17,8 +16,10 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
     const [isReplying, setIsReplying] = useState(false);
     const [replyText, setReplyText] = useState('');
     const [isSending, setIsSending] = useState(false);
-    const [isRating, setIsRating] = useState(false); // For managing heart/like state locally if needed
-    const [hasHearted, setHasHearted] = useState(snippet.viewerRating === 'like');
+    const [isRating, setIsRating] = useState(false);
+    // Local state for optimistic update
+    const [viewerRating, setViewerRating] = useState<'like' | 'none'>(snippet.viewerRating);
+    const [likeCount, setLikeCount] = useState(snippet.likeCount);
 
     const handleReply = async () => {
         if (!replyText.trim()) return;
@@ -36,15 +37,28 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
     };
 
     const handleRate = async () => {
-        const newRating = hasHearted ? 'none' : 'like';
+        if (isRating) return;
+
+        // Optimistic update
+        const oldRating = viewerRating;
+        const newRating = oldRating === 'like' ? 'none' : 'like';
+        const oldLikeCount = likeCount;
+
+        setViewerRating(newRating);
+        setLikeCount(prev => newRating === 'like' ? prev + 1 : Math.max(0, prev - 1));
         setIsRating(true);
+
         try {
             const success = await rateComment(topLevelComment.id, newRating);
-            if (success) {
-                setHasHearted(!hasHearted);
+            if (!success) {
+                // Revert if failed
+                setViewerRating(oldRating);
+                setLikeCount(oldLikeCount);
             }
         } catch (error) {
             console.error(error);
+            setViewerRating(oldRating);
+            setLikeCount(oldLikeCount);
         } finally {
             setIsRating(false);
         }
@@ -65,134 +79,150 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
         const now = new Date();
         const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-        let interval = seconds / 31536000;
-        if (interval > 1) return Math.floor(interval) + " anos atrás";
-        interval = seconds / 2592000;
-        if (interval > 1) return Math.floor(interval) + " meses atrás";
-        interval = seconds / 86400;
-        if (interval > 1) return Math.floor(interval) + " dias atrás";
-        interval = seconds / 3600;
-        if (interval > 1) return Math.floor(interval) + " horas atrás";
-        interval = seconds / 60;
-        if (interval > 1) return Math.floor(interval) + " min atrás";
-        return "agora mesmo";
+        const rtf = new Intl.RelativeTimeFormat('pt-BR', { numeric: 'auto' });
+
+        if (seconds < 60) return "agora mesmo";
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return rtf.format(-minutes, 'minute');
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return rtf.format(-hours, 'hour');
+        const days = Math.floor(hours / 24);
+        if (days < 30) return rtf.format(-days, 'day');
+        const months = Math.floor(days / 30);
+        if (months < 12) return rtf.format(-months, 'month');
+        const years = Math.floor(days / 365);
+        return rtf.format(-years, 'year');
     };
 
     return (
-        <div className="flex gap-4 p-4 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+        <div className="flex gap-4 p-5 mb-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700/50 hover:shadow-md transition-all duration-300 group">
             {/* Avatar */}
             <div className="shrink-0">
                 <img
                     src={snippet.authorProfileImageUrl}
                     alt={snippet.authorDisplayName}
-                    className="w-10 h-10 rounded-full object-cover"
+                    className="w-10 h-10 rounded-full object-cover ring-2 ring-white dark:ring-gray-700 shadow-sm"
+                    loading="lazy"
                     onError={(e) => {
                         e.currentTarget.style.display = 'none';
-                        e.currentTarget.parentElement!.innerHTML = '<div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="text-gray-500"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
+                        e.currentTarget.parentElement!.innerHTML = '<div class="w-10 h-10 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center text-gray-500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="opacity-50"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
                     }}
                 />
             </div>
 
-            {/* Content */}
+            {/* Main Content */}
             <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm text-gray-900 dark:text-white truncate">
-                            {snippet.authorDisplayName}
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                            • {timeAgo(snippet.publishedAt)}
-                        </span>
-                    </div>
+
+                {/* Header: Author & Time */}
+                <div className="flex items-center gap-2 mb-1.5">
+                    <span className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate hover:underline cursor-pointer">
+                        {snippet.authorDisplayName}
+                    </span>
+                    <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">
+                        {timeAgo(snippet.publishedAt)}
+                    </span>
                 </div>
 
+                {/* Comment Text */}
                 <div
-                    className="text-sm text-gray-800 dark:text-gray-300 mb-2 whitespace-pre-wrap leading-relaxed"
+                    className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed mb-3"
                     dangerouslySetInnerHTML={{ __html: snippet.textDisplay }}
                 />
 
-                {/* Actions Bar */}
-                <div className="flex items-center gap-4 mt-2">
+                {/* Action Bar */}
+                <div className="flex items-center flex-wrap gap-2 sm:gap-4 select-none">
+
+                    {/* Reply Button */}
                     <button
                         onClick={() => setIsReplying(!isReplying)}
-                        className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${isReplying
+                                ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200'
+                            }`}
                     >
                         <MessageSquare size={14} />
                         {isReplying ? 'Cancelar' : 'Responder'}
                     </button>
 
+                    {/* Like Button */}
                     <button
                         onClick={handleRate}
                         disabled={isRating}
-                        className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${hasHearted ? 'text-red-500' : 'text-gray-500 hover:text-red-500 dark:text-gray-400'}`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${viewerRating === 'like'
+                                ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
+                                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200'
+                            }`}
+                        title={viewerRating === 'like' ? 'Remover like' : 'Curtir comentário'}
                     >
-                        <Heart size={14} className={hasHearted ? "fill-red-500" : ""} />
-                        {hasHearted ? 'Amei' : 'Amei'}
+                        <ThumbsUp size={14} className={viewerRating === 'like' ? 'fill-current' : ''} />
+                        {likeCount > 0 ? likeCount : 'Curtir'}
                     </button>
 
-                    {/* Like Count Display (Not actionable by owner usually for self-like via API in same way, but let's show count) */}
-                    <div className="flex items-center gap-1 text-xs text-gray-400" title="Likes do público">
-                        <ThumbsUp size={12} />
-                        {snippet.likeCount > 0 && <span>{snippet.likeCount}</span>}
-                    </div>
-
-                    <div className="flex-1"></div>
-
+                    {/* Delete Button (Hover only) */}
                     <button
                         onClick={handleDelete}
-                        className="text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-1.5 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all opacity-0 group-hover:opacity-100 ml-auto sm:ml-0"
                         title="Excluir comentário"
                     >
                         <Trash2 size={14} />
                     </button>
+
                 </div>
 
-                {/* Reply Box */}
+                {/* Reply Input Area */}
                 {isReplying && (
-                    <div className="mt-3 flex gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                        <div className="flex-1">
+                    <div className="mt-4 flex gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <div className="flex-1 relative">
                             <textarea
                                 value={replyText}
                                 onChange={(e) => setReplyText(e.target.value)}
-                                placeholder="Escreva sua resposta..."
-                                className="w-full p-3 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none resize-none h-24"
+                                placeholder="Escreva uma resposta pública..."
+                                className="w-full p-4 pr-12 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none h-28 transition-shadow"
                                 autoFocus
                             />
-                            <div className="flex justify-end gap-2 mt-2">
-                                <button
-                                    onClick={() => setIsReplying(false)}
-                                    className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                                >
-                                    Cancelar
-                                </button>
+                            <div className="absolute bottom-3 right-3 flex gap-2">
                                 <button
                                     onClick={handleReply}
                                     disabled={!replyText.trim() || isSending}
-                                    className="px-4 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                                    className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center gap-2"
                                 >
-                                    {isSending ? 'Enviando...' : 'Responder'}
-                                    {!isSending && <CornerDownRight size={12} />}
+                                    {isSending ? (
+                                        <>
+                                            <Loader2 size={12} className="animate-spin" />
+                                            Enviando...
+                                        </>
+                                    ) : (
+                                        <>
+                                            Responder
+                                            <CornerDownRight size={12} />
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* Existing Replies (Simple thread view) */}
+                {/* Existing Replies Thread */}
                 {thread.replies && thread.replies.comments && thread.replies.comments.length > 0 && (
-                    <div className="mt-4 pl-4 border-l-2 border-gray-100 dark:border-gray-800 space-y-4">
+                    <div className="mt-4 space-y-3">
                         {thread.replies.comments.map(reply => (
-                            <div key={reply.id} className="flex gap-3">
+                            <div key={reply.id} className="flex gap-3 pl-4 border-l-2 border-gray-100 dark:border-gray-800">
                                 <img
                                     src={reply.snippet.authorProfileImageUrl}
-                                    className="w-6 h-6 rounded-full"
+                                    className="w-6 h-6 rounded-full ring-1 ring-white dark:ring-gray-700"
+                                    alt=""
                                 />
                                 <div>
                                     <div className="flex items-center gap-2 mb-0.5">
-                                        <span className="text-xs font-semibold text-gray-900 dark:text-white">{reply.snippet.authorDisplayName}</span>
-                                        <span className="text-[10px] text-gray-500">{timeAgo(reply.snippet.publishedAt)}</span>
+                                        <span className="text-xs font-semibold text-gray-900 dark:text-white">
+                                            {reply.snippet.authorDisplayName}
+                                        </span>
+                                        <span className="text-[10px] text-gray-500">
+                                            {timeAgo(reply.snippet.publishedAt)}
+                                        </span>
                                     </div>
-                                    <p className="text-xs text-gray-700 dark:text-gray-400" dangerouslySetInnerHTML={{ __html: reply.snippet.textDisplay }} />
+                                    <p className="text-sm text-gray-600 dark:text-gray-400" dangerouslySetInnerHTML={{ __html: reply.snippet.textDisplay }} />
                                 </div>
                             </div>
                         ))}
@@ -200,18 +230,32 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
                 )}
             </div>
 
-            {/* Video Context */}
+            {/* Video Context Link */}
             {video && (
-                <div className="w-32 shrink-0 hidden md:block">
-                    <a href={`https://www.youtube.com/watch?v=${video.id}`} target="_blank" rel="noopener noreferrer" className="group/video block relative rounded-lg overflow-hidden aspect-video border border-gray-100 dark:border-gray-700">
-                        <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover/video:opacity-100 transition-opacity">
-                            <PlaySquare className="text-white" size={20} />
+                <div className="w-40 shrink-0 hidden lg:block">
+                    <a
+                        href={`https://www.youtube.com/watch?v=${video.id}&lc=${thread.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group/video block relative rounded-lg overflow-hidden aspect-video bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all"
+                    >
+                        <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover transition-transform duration-500 group-hover/video:scale-105" />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/video:opacity-100 transition-opacity duration-200">
+                            <span className="flex items-center gap-1 text-xs text-white font-medium bg-black/60 px-2 py-1 rounded backdrop-blur-sm">
+                                <PlaySquare size={12} /> Assistir
+                            </span>
                         </div>
                     </a>
-                    <a href={`https://www.youtube.com/watch?v=${video.id}`} target="_blank" rel="noopener noreferrer" className="block mt-2 text-[10px] sm:text-xs text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 font-medium line-clamp-2 leading-tight">
-                        {video.title}
-                    </a>
+                    <div className="mt-2 text-right">
+                        <a
+                            href={`https://www.youtube.com/watch?v=${video.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[11px] text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 font-medium line-clamp-2 leading-tight transition-colors inline-block"
+                        >
+                            {video.title}
+                        </a>
+                    </div>
                 </div>
             )}
         </div>
