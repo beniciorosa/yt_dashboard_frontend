@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { CommentThread, replyToComment, rateComment, deleteComment } from '../../services/commentsService';
 import { VideoData } from '../../services/youtubeService';
-import { MessageSquare, ThumbsUp, Trash2, CornerDownRight, Loader2, PlaySquare } from 'lucide-react';
+import { MessageSquare, ThumbsUp, Trash2, CornerDownRight, Loader2, PlaySquare, Wand2, Zap, MoreHorizontal, Check, X } from 'lucide-react';
+import { generateAiReply, fetchQuickReplies, QuickReply } from '../../services/commentsService';
 
 interface Props {
     thread: CommentThread;
@@ -20,6 +21,37 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
     // Local state for optimistic update
     const [viewerRating, setViewerRating] = useState<'like' | 'none'>(snippet.viewerRating);
     const [likeCount, setLikeCount] = useState(snippet.likeCount);
+
+    // AI & Quick Reply State
+    const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+    const [showQuickReplies, setShowQuickReplies] = useState(false);
+    const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
+    const [aiStyle, setAiStyle] = useState('professional');
+
+    const handleAiReply = async () => {
+        setIsGeneratingAi(true);
+        try {
+            const reply = await generateAiReply(snippet.textOriginal, video?.title, aiStyle);
+            setReplyText(reply);
+        } catch (error) {
+            alert("Erro ao gerar resposta com IA.");
+        } finally {
+            setIsGeneratingAi(false);
+        }
+    };
+
+    const handleLoadQuickReplies = async () => {
+        if (!showQuickReplies) {
+            const replies = await fetchQuickReplies();
+            setQuickReplies(replies);
+        }
+        setShowQuickReplies(!showQuickReplies);
+    };
+
+    const handleSelectQuickReply = (text: string) => {
+        setReplyText(text);
+        setShowQuickReplies(false);
+    };
 
     const handleReply = async () => {
         if (!replyText.trim()) return;
@@ -182,9 +214,58 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
                                 value={replyText}
                                 onChange={(e) => setReplyText(e.target.value)}
                                 placeholder="Escreva uma resposta pública..."
-                                className="w-full p-4 pr-12 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none h-28 transition-shadow"
+                                className="w-full p-4 pr-12 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none h-32 transition-shadow"
                                 autoFocus
                             />
+
+                            {/* AI & Quick Tools Toolbar */}
+                            <div className="absolute bottom-3 left-3 flex gap-2">
+                                <button
+                                    onClick={handleAiReply}
+                                    disabled={isGeneratingAi}
+                                    className="p-1.5 text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-medium"
+                                    title="Gerar resposta com IA"
+                                >
+                                    {isGeneratingAi ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+                                    <span className="hidden sm:inline">IA Reply</span>
+                                </button>
+
+                                <div className="relative">
+                                    <button
+                                        onClick={handleLoadQuickReplies}
+                                        className="p-1.5 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-medium"
+                                        title="Respostas Rápidas"
+                                    >
+                                        <Zap size={14} />
+                                        <span className="hidden sm:inline">Rápidas</span>
+                                    </button>
+
+                                    {showQuickReplies && (
+                                        <div className="absolute bottom-full left-0 mb-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
+                                            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 font-medium text-xs text-gray-500">
+                                                Respostas Salvas
+                                            </div>
+                                            <div className="max-h-48 overflow-y-auto">
+                                                {quickReplies.length === 0 ? (
+                                                    <div className="p-3 text-xs text-gray-400 text-center">Nenhuma resposta salva.</div>
+                                                ) : (
+                                                    quickReplies.map(qr => (
+                                                        <button
+                                                            key={qr.id}
+                                                            onClick={() => handleSelectQuickReply(qr.text)}
+                                                            className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-50 last:border-0"
+                                                        >
+                                                            <div className="font-semibold text-gray-700 dark:text-gray-200 mb-0.5">{qr.title}</div>
+                                                            <div className="text-gray-500 line-clamp-1">{qr.text}</div>
+                                                        </button>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
                             <div className="absolute bottom-3 right-3 flex gap-2">
                                 <button
                                     onClick={handleReply}

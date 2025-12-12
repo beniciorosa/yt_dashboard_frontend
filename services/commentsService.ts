@@ -238,3 +238,61 @@ export const rateComment = async (commentId: string, rating: 'like' | 'none' | '
     }
     return true;
 };
+
+// --- AI & Quick Replies ---
+
+const BACKEND_API_URL = 'https://yt-dashboard-backend.vercel.app/comments';
+
+export const generateAiReply = async (commentText: string, videoTitle?: string, style: string = 'professional'): Promise<string> => {
+    try {
+        const res = await fetch(`${BACKEND_API_URL}/generate-reply`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ commentText, videoTitle, style })
+        });
+
+        if (!res.ok) {
+            console.error("Failed to generate AI reply status:", res.status);
+            throw new Error("Failed to generate AI reply");
+        }
+        return await res.text();
+    } catch (error) {
+        console.error("Error generating AI reply:", error);
+        throw error;
+    }
+};
+
+export interface QuickReply {
+    id: string;
+    title: string;
+    text: string;
+}
+
+export const fetchQuickReplies = async (): Promise<QuickReply[]> => {
+    try {
+        const res = await fetch(`${BACKEND_API_URL}/quick-replies`);
+        if (!res.ok) throw new Error("Failed to fetch quick replies");
+        return await res.json();
+    } catch (error) {
+        console.error("Error fetching quick replies:", error);
+        return [];
+    }
+};
+
+export const createQuickReply = async (title: string, text: string): Promise<QuickReply[]> => {
+    const res = await fetch(`${BACKEND_API_URL}/quick-replies`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, text })
+    });
+    if (!res.ok) throw new Error("Failed to create quick reply");
+    return await res.json();
+};
+
+export const deleteQuickReply = async (id: string): Promise<boolean> => {
+    const res = await fetch(`${BACKEND_API_URL}/quick-replies/${id}`, {
+        method: 'DELETE'
+    });
+    if (!res.ok) throw new Error("Failed to delete quick reply");
+    return true;
+};
