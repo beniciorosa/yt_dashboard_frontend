@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { CommentThread, replyToComment, rateComment, deleteComment } from '../../services/commentsService';
 import { VideoData } from '../../services/youtubeService';
-import { MessageSquare, ThumbsUp, Trash2, CornerDownRight, Loader2, PlaySquare, Wand2, Zap, MoreHorizontal, Check, X } from 'lucide-react';
-import { generateAiReply, fetchQuickReplies, QuickReply } from '../../services/commentsService';
+import { MessageSquare, ThumbsUp, Trash2, CornerDownRight, Loader2, PlaySquare, Wand2, Zap, MoreHorizontal, Check, X, Plus, ChevronLeft } from 'lucide-react';
+import { generateAiReply, fetchQuickReplies, createQuickReply, deleteQuickReply, learnReply, QuickReply } from '../../services/commentsService';
 
 interface Props {
     thread: CommentThread;
@@ -27,6 +27,9 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
     const [showQuickReplies, setShowQuickReplies] = useState(false);
     const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
     const [aiStyle, setAiStyle] = useState('professional');
+    const [isCreatingQuickReply, setIsCreatingQuickReply] = useState(false);
+    const [newQuickReplyTitle, setNewQuickReplyTitle] = useState('');
+    const [newQuickReplyText, setNewQuickReplyText] = useState('');
 
     const handleAiReply = async () => {
         setIsGeneratingAi(true);
@@ -46,6 +49,40 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
             setQuickReplies(replies);
         }
         setShowQuickReplies(!showQuickReplies);
+        setIsCreatingQuickReply(false); // Reset to list view
+    };
+
+    const handleSaveQuickReply = async () => {
+        if (!newQuickReplyTitle.trim() || !newQuickReplyText.trim()) return;
+        try {
+            const updatedList = await createQuickReply(newQuickReplyTitle, newQuickReplyText);
+            setQuickReplies(updatedList); // Assuming backend returns the full list or single item? 
+            // The service returns `QuickReply[]` actually based on my previous code? 
+            // Wait, looking at service: `return await res.json();` from `.insert(...).select()`. 
+            // Supabase `.select()` returns the array of inserted items. 
+            // So I should append it or re-fetch. Re-fetching is safer or just manual append.
+            // Actually let's just re-fetch to be sure order is correct or just optimistic update.
+            // Let's assume the service returns the inserted array. 
+            // I'll just re-fetch to be simple.
+            const freshList = await fetchQuickReplies();
+            setQuickReplies(freshList);
+            setIsCreatingQuickReply(false);
+            setNewQuickReplyTitle('');
+            setNewQuickReplyText('');
+        } catch (error) {
+            alert("Erro ao salvar resposta rápida.");
+        }
+    };
+
+    const handleDeleteQuickReply = async (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        if (!confirm("Excluir resposta salva?")) return;
+        try {
+            await deleteQuickReply(id);
+            setQuickReplies(prev => prev.filter(r => r.id !== id));
+        } catch (error) {
+            alert("Erro ao excluir.");
+        }
     };
 
     const handleSelectQuickReply = (text: string) => {
@@ -57,7 +94,11 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
         if (!replyText.trim()) return;
         setIsSending(true);
         try {
-            await replyToComment(topLevelComment.id, replyText);
+            const newReply = await replyToComment(topLevelComment.id, replyText);
+
+            // Trigger Learning Mode (Fire & Forget)
+            learnReply(snippet.textOriginal, replyText);
+
             setReplyText('');
             setIsReplying(false);
             onReplySuccess(thread.id);
@@ -241,24 +282,85 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
                                     </button>
 
                                     {showQuickReplies && (
-                                        <div className="absolute bottom-full left-0 mb-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
-                                            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 font-medium text-xs text-gray-500">
-                                                Respostas Salvas
-                                            </div>
-                                            <div className="max-h-48 overflow-y-auto">
-                                                {quickReplies.length === 0 ? (
-                                                    <div className="p-3 text-xs text-gray-400 text-center">Nenhuma resposta salva.</div>
+                                        <div className="absolute bottom-full left-0 mb-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
+
+                                            {/* Header */}
+                                            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                                                {isCreatingQuickReply ? (
+                                                    <button
+                                                        onClick={() => setIsCreatingQuickReply(false)}
+                                                        className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1 text-xs"
+                                                    >
+                                                        <ChevronLeft size={12} /> Voltar
+                                                    </button>
                                                 ) : (
-                                                    quickReplies.map(qr => (
+                                                    <span className="font-medium text-xs text-gray-500">Respostas Salvas</span>
+                                                )}
+
+                                                {!isCreatingQuickReply && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setIsCreatingQuickReply(true); }}
+                                                        className="text-blue-600 hover:text-blue-700 text-xs font-semibold flex items-center gap-1"
+                                                    >
+                                                        <Plus size={12} /> Nova
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {/* Content */}
+                                            <div className="p-0">
+                                                {isCreatingQuickReply ? (
+                                                    <div className="p-3 space-y-3">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Título (ex: Agradecimento)"
+                                                            value={newQuickReplyTitle}
+                                                            onChange={e => setNewQuickReplyTitle(e.target.value)}
+                                                            className="w-full px-2 py-1.5 text-xs bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded focus:outline-none focus:border-blue-500"
+                                                            autoFocus
+                                                        />
+                                                        <textarea
+                                                            placeholder="Texto da resposta..."
+                                                            value={newQuickReplyText}
+                                                            onChange={e => setNewQuickReplyText(e.target.value)}
+                                                            className="w-full px-2 py-1.5 text-xs bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded focus:outline-none focus:border-blue-500 min-h-[80px] resize-none"
+                                                        />
                                                         <button
-                                                            key={qr.id}
-                                                            onClick={() => handleSelectQuickReply(qr.text)}
-                                                            className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-50 last:border-0"
+                                                            onClick={handleSaveQuickReply}
+                                                            disabled={!newQuickReplyTitle.trim() || !newQuickReplyText.trim()}
+                                                            className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded disabled:opacity-50 transition-colors"
                                                         >
-                                                            <div className="font-semibold text-gray-700 dark:text-gray-200 mb-0.5">{qr.title}</div>
-                                                            <div className="text-gray-500 line-clamp-1">{qr.text}</div>
+                                                            Salvar Resposta
                                                         </button>
-                                                    ))
+                                                    </div>
+                                                ) : (
+                                                    <div className="max-h-48 overflow-y-auto">
+                                                        {quickReplies.length === 0 ? (
+                                                            <div className="p-4 text-xs text-gray-400 text-center">
+                                                                Nenhuma resposta salva.<br />
+                                                                Clique em "Nova" para criar.
+                                                            </div>
+                                                        ) : (
+                                                            quickReplies.map(qr => (
+                                                                <div
+                                                                    key={qr.id}
+                                                                    className="group/item w-full text-left px-3 py-2 text-xs hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-50 dark:border-gray-800 last:border-0 cursor-pointer relative"
+                                                                    onClick={() => handleSelectQuickReply(qr.text)}
+                                                                >
+                                                                    <div className="font-semibold text-gray-700 dark:text-gray-200 mb-0.5 pr-6">{qr.title}</div>
+                                                                    <div className="text-gray-500 line-clamp-1">{qr.text}</div>
+
+                                                                    <button
+                                                                        onClick={(e) => handleDeleteQuickReply(e, qr.id)}
+                                                                        className="absolute top-2 right-2 text-gray-300 hover:text-red-500 opacity-0 group-hover/item:opacity-100 transition-opacity p-1"
+                                                                        title="Excluir"
+                                                                    >
+                                                                        <Trash2 size={12} />
+                                                                    </button>
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>

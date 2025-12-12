@@ -296,3 +296,16 @@ export const deleteQuickReply = async (id: string): Promise<boolean> => {
     if (!res.ok) throw new Error("Failed to delete quick reply");
     return true;
 };
+
+export const learnReply = async (commentText: string, replyText: string): Promise<void> => {
+    // Fire and forget learning, but we log errors
+    try {
+        await fetch(`${BACKEND_API_URL}/learn`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ commentText, replyText })
+        });
+    } catch (e) {
+        console.warn("Failed to save reply for learning:", e);
+    }
+};
