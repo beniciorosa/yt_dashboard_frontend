@@ -1,4 +1,3 @@
-```javascript
 import React, { useState, useEffect } from 'react';
 import { Download, FileText, Copy, Check, RefreshCw, Save, Loader2, BrainCircuit, ArrowLeft, Edit2 } from 'lucide-react';
 import { downloadTextFile, downloadDocFile } from '../../utils/fileHelpers';
@@ -37,14 +36,6 @@ const DescriptionResult: React.FC<DescriptionResultProps> = ({ text, data, onTex
 
     const handleSave = async () => {
         setSaving(true);
-        // Note: Currently onSaveProject saves 'generatedDescription' from parent state. 
-        // Ideally we should pass the edited text back to parent, but for now let's assume the user copies or we update the parent state if needed.
-        // Actually, the request didn't strictly say we must update the parent state for saving to database, just "editable". 
-        // However, it's better UX if we could update the parent. For this iteration, I'll rely on the visual edit. 
-        // If 'onSaveProject' uses the parent state, it might save the OLD description.
-        // Let's stick to the visual requirement first, but to be safe, copy is what most users do.
-        // Or I can add an onChange prop prop to update parent. 
-        // Given existing props, I will just execute onSaveProject. Ideally I should refactor to update parent.
         await onSaveProject();
         setSaving(false);
         setSaved(true);
@@ -65,11 +56,10 @@ const DescriptionResult: React.FC<DescriptionResultProps> = ({ text, data, onTex
                         <button
                             onClick={handleSave}
                             disabled={saved || saving}
-                            className={`flex items - center gap - 1.5 px - 3 py - 1.5 text - xs font - medium border rounded - md transition - all hover: shadow - sm ${
-    saved
-        ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
-        : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
-} `}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-md transition-all hover:shadow-sm ${saved
+                                ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
+                                : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                                }`}
                         >
                             {saving ? <Loader2 size={14} className="animate-spin" /> : (saved ? <Check size={14} /> : <Save size={14} />)}
                             {saved ? 'Salvo!' : (saving ? 'Salvando...' : 'Salvar Projeto')}
@@ -100,7 +90,7 @@ const DescriptionResult: React.FC<DescriptionResultProps> = ({ text, data, onTex
                             <ArrowLeft size={14} />
                             Novo
                         </button>
-                         <button
+                        <button
                             onClick={onEditConfig}
                             className="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1"
                         >
@@ -131,11 +121,11 @@ const DescriptionResult: React.FC<DescriptionResultProps> = ({ text, data, onTex
             {/* Sidebar - Rationale (New Style) */}
             {(data?.description_rationale || data?.chapters_rationale) && (
                 <div className="w-full lg:w-80 flex-shrink-0 space-y-4 animate-in slide-in-from-right-4">
-                     <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 p-6 rounded-xl border border-purple-100 dark:border-purple-800 shadow-sm">
+                    <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 p-6 rounded-xl border border-purple-100 dark:border-purple-800 shadow-sm">
                         <h3 className="text-purple-900 dark:text-purple-300 font-semibold mb-4 flex items-center gap-2">
                             <BrainCircuit size={20} /> Insights do Algoritmo
                         </h3>
-                        
+
                         <div className="space-y-6 max-h-[700px] overflow-y-auto scrollbar-thin scrollbar-thumb-purple-100 dark:scrollbar-thumb-purple-900 pr-2">
                             {data?.description_rationale && (
                                 <div className="space-y-2">
