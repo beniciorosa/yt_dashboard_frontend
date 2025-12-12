@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Competitor, StatSnapshot } from '../types';
 import { fetchCompetitors } from '../services/storageService';
 import { fetchYoutubeChannelData } from '../services/youtubeService';
-import { X, Search, Trophy, TrendingUp, Users, Video, Eye, ChevronDown, Swords, AlertCircle } from 'lucide-react';
+import { X, Search, Trophy, TrendingUp, Users, Video, Eye, ChevronDown, Swords, AlertCircle, Calendar } from 'lucide-react';
 
 interface Props {
     className?: string;
     currentCompetitor: Competitor;
     onClose: () => void;
 }
+
+type TimeRange = '7' | '14' | '28' | 'all';
 
 export const VersusPanel: React.FC<Props> = ({ className, currentCompetitor, onClose }) => {
     const [savedCompetitors, setSavedCompetitors] = useState<Competitor[]>([]);
@@ -17,6 +19,7 @@ export const VersusPanel: React.FC<Props> = ({ className, currentCompetitor, onC
     const [isSearching, setIsSearching] = useState(false);
     const [searchError, setSearchError] = useState<string | null>(null);
     const [showDropdown, setShowDropdown] = useState(false);
+    const [timeRange, setTimeRange] = useState<TimeRange>('7');
 
     // Load saved competitors on mount
     useEffect(() => {
@@ -76,28 +79,79 @@ export const VersusPanel: React.FC<Props> = ({ className, currentCompetitor, onC
         if (snapshots.length === 0) return null;
 
         const latest = snapshots[snapshots.length - 1];
-        const first = snapshots[0];
 
-        // Calculate days diff (min 1 day to avoid Infinity)
-        const timeDiff = new Date(latest.date).getTime() - new Date(first.date).getTime();
-        const totalDays = Math.max(1, timeDiff / (1000 * 3600 * 24));
+        // Calculate Growth based on Time Range
+        let startSnapshot = snapshots[0];
 
-        const hasHistory = snapshots.length > 1;
+        if (timeRange !== 'all' && snapshots.length > 1) {
+            const days = parseInt(timeRange);
+            const targetDate = new Date();
+            targetDate.setDate(targetDate.getDate() - days);
+            const targetTime = targetDate.getTime();
 
-        const getGrowth = (current: number, initial: number) => {
-            if (!hasHistory) return 0;
-            return (current - initial) / totalDays;
+            // Find the snapshot closest to target date, but strictly BEFORE current snapshot
+            // We iterate backwards to find the first one that is <= targetTime
+            // If we don't find one old enough, we take the oldest available (index 0)
+            let found = snapshots[0];
+
+            // Simple approach: find first snapshot that is likely "days" ago
+            // Since snapshots are chronological
+            for (let i = 0; i < snapshots.length; i++) {
+                const sDate = new Date(snapshots[i].date).getTime();
+                if (sDate >= targetTime) {
+                    // This snapshot is within the range. The one *before* it would be outside.
+                    // Actually, we want the snapshot that represents the state "days ago".
+                    // If I want growth over 7 days, I need value(Now) - value(Now - 7d).
+                    // So I need to find a snapshot close to (Now - 7d).
+                    // If today is 12th, and I want 7 days ago (5th).
+                    // I look for snapshot with date <= 5th.
+                    // The loop going forward: if date > 5th, then the previous one was <= 5th.
+                    if (i > 0) found = snapshots[i - 1];
+                    else found = snapshots[0];
+                    // Wait, this logic is tricky if gaps exist. 
+                    // Let's stick to user request: "14 e 28 dias vai mostrar o que há dentro dele".
+                    // This implies using the oldest available if strictly matching range isn't possible.
+                    break;
+                }
+                // If we reach the end and all are older than target (unlikely if latest is today), 
+                // then effectively we use the latest-1? No.
+            }
+
+            // Better logic: 
+            // 1. Target Timestamp = Now - Days.
+            // 2. Find snapshot with timestamp closest to Target Timestamp.
+            //    Ideally a bit OLDER than target to capture the full period, or exact match.
+            //    If the oldest snapshot is still NEWER than target (e.g. oldest is 2 days ago, target is 7 days ago),
+            //    then we use that oldest snapshot. This satisfies "shows what is inside it".
+
+            const bestMatch = snapshots.reduce((prev, curr) => {
+                const prevDiff = Math.abs(new Date(prev.date).getTime() - targetTime);
+                const currDiff = Math.abs(new Date(curr.date).getTime() - targetTime);
+                return currDiff < prevDiff ? curr : prev;
+            });
+
+            // If the best match is actually the latest snapshot (e.g. only 1 snapshot today), growth is 0.
+            // But we usually want at least somewhat different snapshots.
+            startSnapshot = bestMatch;
+
+            // Fallback: If best match is same as latest, try to go one back if possible
+            if (startSnapshot.date === latest.date && snapshots.length > 1) {
+                startSnapshot = snapshots[snapshots.length - 2];
+            }
+        }
+
+        const growth = {
+            subs: latest.subscribers - startSnapshot.subscribers,
+            views: latest.views - startSnapshot.views,
+            videos: latest.videos - startSnapshot.videos,
         };
 
         return {
             subscribers: latest.subscribers,
             views: latest.views,
             videos: latest.videos,
-            dailySubs: getGrowth(latest.subscribers, first.subscribers),
-            dailyViews: getGrowth(latest.views, first.views),
-            // weeklySubs: getGrowth(latest.subscribers, first.subscribers) * 7,
-            // weeklyViews: getGrowth(latest.views, first.views) * 7,
-            hasHistory
+            growth,
+            totalSnapshots: snapshots.length
         };
     };
 
@@ -105,35 +159,33 @@ export const VersusPanel: React.FC<Props> = ({ className, currentCompetitor, onC
     const opponentStats = calculateStats(opponent);
 
     // Helper to render comparison row
+    // NOTE: Swapped order: Left = Current (Champion), Right = Opponent
     const renderStatRow = (
         label: string,
-        valueLeft: number | undefined,
-        valueRight: number | undefined,
+        valueChampion: number | undefined,
+        valueOpponent: number | undefined,
         format: 'number' | 'compact' = 'compact',
-        isGrowth: boolean = false
+        showZeroAsDash: boolean = false
     ) => {
-        if (valueLeft === undefined || valueRight === undefined) return null;
+        if (valueChampion === undefined || valueOpponent === undefined) return null;
 
-        const leftWins = valueLeft > valueRight;
-        const rightWins = valueRight > valueLeft;
-        const tie = valueLeft === valueRight;
+        const championWins = valueChampion > valueOpponent;
+        const opponentWins = valueOpponent > valueChampion;
 
         const formatNum = (num: number) => {
+            if (num === 0 && showZeroAsDash) return '-';
             if (format === 'compact') {
                 return new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(num);
             }
             return new Intl.NumberFormat('en-US').format(Math.round(num));
         };
 
-        const displayLeft = formatNum(valueLeft);
-        const displayRight = formatNum(valueRight);
-
         return (
             <div className="grid grid-cols-3 gap-4 py-3 border-b border-gray-100 dark:border-gray-800 items-center">
-                {/* Left (Opponent) */}
-                <div className={`text-right font-mono ${leftWins ? 'text-green-600 font-bold' : 'text-gray-600 dark:text-gray-400'}`}>
-                    {leftWins && <Trophy size={12} className="inline mr-1 mb-1 text-yellow-500" />}
-                    {isGrowth && !opponentStats?.hasHistory ? 'N/A' : displayLeft}
+                {/* Left (Champion) */}
+                <div className={`text-right font-mono ${championWins ? 'text-green-600 font-bold' : 'text-gray-600 dark:text-gray-400'}`}>
+                    {championWins && <Trophy size={12} className="inline mr-1 mb-1 text-yellow-500" />}
+                    {formatNum(valueChampion)}
                 </div>
 
                 {/* Label */}
@@ -141,10 +193,10 @@ export const VersusPanel: React.FC<Props> = ({ className, currentCompetitor, onC
                     {label}
                 </div>
 
-                {/* Right (Current) */}
-                <div className={`text-left font-mono ${rightWins ? 'text-green-600 font-bold' : 'text-gray-600 dark:text-gray-400'}`}>
-                    {isGrowth && !currentStats?.hasHistory ? 'N/A' : displayRight}
-                    {rightWins && <Trophy size={12} className="inline ml-1 mb-1 text-yellow-500" />}
+                {/* Right (Opponent) */}
+                <div className={`text-left font-mono ${opponentWins ? 'text-green-600 font-bold' : 'text-gray-600 dark:text-gray-400'}`}>
+                    {formatNum(valueOpponent)}
+                    {opponentWins && <Trophy size={12} className="inline ml-1 mb-1 text-yellow-500" />}
                 </div>
             </div>
         );
@@ -167,7 +219,7 @@ export const VersusPanel: React.FC<Props> = ({ className, currentCompetitor, onC
             {/* CONTENT SCROLL */}
             <div className="flex-1 overflow-y-auto p-6">
 
-                {/* FIGHTER SELECTION */}
+                {/* FIGHTER SELECTION (Title remains roughly same, but positions swap in grid below) */}
                 <div className="mb-8 relative z-20">
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Desafiante (Opponent)</label>
                     <div className="relative">
@@ -194,7 +246,6 @@ export const VersusPanel: React.FC<Props> = ({ className, currentCompetitor, onC
                                             <span className="font-medium text-slate-700 dark:text-slate-200">{c.channelName}</span>
                                         </div>
                                     ))}
-                                {/* Option to search external if no saved match */}
                                 <div onClick={handleSearch} className="p-3 bg-indigo-50 dark:bg-slate-800 text-indigo-600 text-sm font-medium cursor-pointer text-center hover:bg-indigo-100 dark:hover:bg-slate-700">
                                     Buscar "{searchTerm}" no YouTube...
                                 </div>
@@ -204,10 +255,23 @@ export const VersusPanel: React.FC<Props> = ({ className, currentCompetitor, onC
                     {searchError && <p className="text-red-500 text-sm mt-2 flex items-center gap-1"><AlertCircle size={14} /> {searchError}</p>}
                 </div>
 
-                {/* HEAD TO HEAD HEADER */}
+                {/* HEAD TO HEAD COMPARISON - SWAPPED ORDER */}
                 <div className="grid grid-cols-2 gap-4 mb-6">
-                    {/* Left Box */}
-                    <div className={`p-4 rounded-xl border flex flex-col items-center text-center transition-all ${opponent ? 'bg-white dark:bg-slate-800 border-indigo-100 dark:border-indigo-900 shadow-sm' : 'border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800/50'}`}>
+
+                    {/* Left Box (Current / Champion) */}
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex flex-col items-center text-center shadow-lg relative overflow-hidden order-1">
+                        <div className="absolute top-0 right-0 p-2 opacity-10">
+                            <Trophy size={64} />
+                        </div>
+                        <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/50 mb-3 shadow-md z-10">
+                            <img src={currentCompetitor.avatarUrl || '/placeholder.png'} className="w-full h-full object-cover" />
+                        </div>
+                        <h3 className="font-bold text-white line-clamp-1 z-10">{currentCompetitor.channelName}</h3>
+                        <p className="text-xs text-indigo-100 z-10">Campeão Atual</p>
+                    </div>
+
+                    {/* Right Box (Opponent / Challenger) */}
+                    <div className={`p-4 rounded-xl border flex flex-col items-center text-center transition-all order-2 ${opponent ? 'bg-white dark:bg-slate-800 border-indigo-100 dark:border-indigo-900 shadow-sm' : 'border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800/50'}`}>
                         {opponent ? (
                             <>
                                 <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-indigo-500 mb-3 shadow-md">
@@ -224,17 +288,6 @@ export const VersusPanel: React.FC<Props> = ({ className, currentCompetitor, onC
                         )}
                     </div>
 
-                    {/* Right Box (Current) */}
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex flex-col items-center text-center shadow-lg relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-2 opacity-10">
-                            <Trophy size={64} />
-                        </div>
-                        <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/50 mb-3 shadow-md z-10">
-                            <img src={currentCompetitor.avatarUrl || '/placeholder.png'} className="w-full h-full object-cover" />
-                        </div>
-                        <h3 className="font-bold text-white line-clamp-1 z-10">{currentCompetitor.channelName}</h3>
-                        <p className="text-xs text-indigo-100 z-10">Campeão Atual</p>
-                    </div>
                 </div>
 
                 {/* METRICS COMPARISON */}
@@ -246,26 +299,53 @@ export const VersusPanel: React.FC<Props> = ({ className, currentCompetitor, onC
                             <h4 className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">
                                 <Trophy size={14} /> Totais Acumulados
                             </h4>
-                            {renderStatRow("Inscritos", opponentStats.subscribers, currentStats.subscribers)}
-                            {renderStatRow("Visualizações", opponentStats.views, currentStats.views)}
-                            {renderStatRow("Uploads", opponentStats.videos, currentStats.videos, 'number')}
+                            {/* Pass Champion First (Left), then Opponent (Right) */}
+                            {renderStatRow("Inscritos", currentStats.subscribers, opponentStats.subscribers)}
+                            {renderStatRow("Visualizações", currentStats.views, opponentStats.views)}
+                            {renderStatRow("Uploads", currentStats.videos, opponentStats.videos, 'number')}
                         </div>
 
                         {/* Section: GROWTH */}
                         <div>
-                            <h4 className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">
-                                <TrendingUp size={14} /> Crescimento Médio (Diário)
-                            </h4>
-                            {renderStatRow("Novos Inscritos / Dia", opponentStats.dailySubs, currentStats.dailySubs, 'number', true)}
-                            {renderStatRow("Views / Dia", opponentStats.dailyViews, currentStats.dailyViews, 'compact', true)}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 border-b border-gray-100 pb-2">
+                                <h4 className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                    <TrendingUp size={14} /> Métricas de Crescimento
+                                </h4>
+
+                                <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 gap-1">
+                                    {(['7', '14', '28', 'all'] as const).map((r) => (
+                                        <button
+                                            key={r}
+                                            onClick={() => setTimeRange(r)}
+                                            className={`px-2 py-1 text-[10px] font-bold rounded-md transition-all ${timeRange === r
+                                                    ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                                                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                                }`}
+                                        >
+                                            {r === 'all' ? 'Início' : `${r}d`}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {renderStatRow("Inscritos ganhos", currentStats.growth.subs, opponentStats.growth.subs, 'number', true)}
+                            {renderStatRow("Visualizações ganhas", currentStats.growth.views, opponentStats.growth.views, 'compact', true)}
+                            {renderStatRow("Novos Vídeos", currentStats.growth.videos, opponentStats.growth.videos, 'number', true)}
                         </div>
 
-                        {!opponentStats.hasHistory && (
-                            <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-xs rounded-lg flex items-start gap-2">
-                                <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                                <p>O canal desafiante foi adicionado agora, então não temos histórico para calcular o crescimento diário exato. Os dados de crescimento aparecerão conforme novos snapshots forem salvos.</p>
+
+                        {/* INFO BOX */}
+                        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs rounded-lg flex items-start gap-2">
+                            <Calendar size={16} className="shrink-0 mt-0.5" />
+                            <div>
+                                <p className="font-semibold mb-1">Período de Análise: {timeRange === 'all' ? 'Desde o início do rastreamento' : `Últimos ${timeRange} dias`}</p>
+                                <p className="opacity-80">
+                                    Os dados de crescimento são calculados com base no histórico salvo no banco de dados.
+                                    {currentStats.totalSnapshots < 2 && " O seu canal possui poucos registros para análise precisa."}
+                                    {(!opponentStats.totalSnapshots || opponentStats.totalSnapshots < 2) && " O desafiante possui poucos registros."}
+                                </p>
                             </div>
-                        )}
+                        </div>
                     </div>
                 )}
 
