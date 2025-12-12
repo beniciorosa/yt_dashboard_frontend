@@ -1,5 +1,6 @@
+```javascript
 import React, { useState, useEffect } from 'react';
-import { Download, FileText, Copy, Check, RefreshCw, Save, Loader2, Lightbulb } from 'lucide-react';
+import { Download, FileText, Copy, Check, RefreshCw, Save, Loader2, BrainCircuit, ArrowLeft, Edit2 } from 'lucide-react';
 import { downloadTextFile, downloadDocFile } from '../../utils/fileHelpers';
 import { GeneratedContent } from '../../services/openaiService';
 
@@ -8,10 +9,11 @@ interface DescriptionResultProps {
     data?: GeneratedContent | null;
     onTextChange: (text: string) => void;
     onBack: () => void;
+    onEditConfig: () => void;
     onSaveProject: () => Promise<void>;
 }
 
-const DescriptionResult: React.FC<DescriptionResultProps> = ({ text, data, onTextChange, onBack, onSaveProject }) => {
+const DescriptionResult: React.FC<DescriptionResultProps> = ({ text, data, onTextChange, onBack, onEditConfig, onSaveProject }) => {
     const [editableText, setEditableText] = useState(text);
     const [copied, setCopied] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -63,10 +65,11 @@ const DescriptionResult: React.FC<DescriptionResultProps> = ({ text, data, onTex
                         <button
                             onClick={handleSave}
                             disabled={saved || saving}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-md transition-all hover:shadow-sm ${saved
-                                ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
-                                : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
-                                }`}
+                            className={`flex items - center gap - 1.5 px - 3 py - 1.5 text - xs font - medium border rounded - md transition - all hover: shadow - sm ${
+    saved
+        ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
+        : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+} `}
                         >
                             {saving ? <Loader2 size={14} className="animate-spin" /> : (saved ? <Check size={14} /> : <Save size={14} />)}
                             {saved ? 'Salvo!' : (saving ? 'Salvando...' : 'Salvar Projeto')}
@@ -89,13 +92,22 @@ const DescriptionResult: React.FC<DescriptionResultProps> = ({ text, data, onTex
                 />
 
                 <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <button
-                        onClick={onBack}
-                        className="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1"
-                    >
-                        <RefreshCw size={14} />
-                        Gerar nova descrição
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={onBack}
+                            className="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-red-600 dark:hover:text-red-400 flex items-center gap-1"
+                        >
+                            <ArrowLeft size={14} />
+                            Novo
+                        </button>
+                         <button
+                            onClick={onEditConfig}
+                            className="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1"
+                        >
+                            <Edit2 size={14} />
+                            Editar Config
+                        </button>
+                    </div>
 
                     <div className="flex gap-2 w-full sm:w-auto">
                         <button
@@ -116,20 +128,19 @@ const DescriptionResult: React.FC<DescriptionResultProps> = ({ text, data, onTex
                 </div>
             </div>
 
-            {/* Sidebar - Rationale */}
+            {/* Sidebar - Rationale (New Style) */}
             {(data?.description_rationale || data?.chapters_rationale) && (
                 <div className="w-full lg:w-80 flex-shrink-0 space-y-4 animate-in slide-in-from-right-4">
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800/50 rounded-xl border border-blue-100 dark:border-slate-700 shadow-sm overflow-hidden">
-                        <div className="px-4 py-3 border-b border-blue-100 dark:border-slate-700 bg-white/50 dark:bg-slate-800/80 flex items-center gap-2">
-                            <Lightbulb className="w-4 h-4 text-amber-500" />
-                            <h3 className="font-semibold text-slate-800 dark:text-slate-200 text-sm">Racional da IA</h3>
-                        </div>
-
-                        <div className="p-4 space-y-6 max-h-[700px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700">
+                     <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 p-6 rounded-xl border border-purple-100 dark:border-purple-800 shadow-sm">
+                        <h3 className="text-purple-900 dark:text-purple-300 font-semibold mb-4 flex items-center gap-2">
+                            <BrainCircuit size={20} /> Insights do Algoritmo
+                        </h3>
+                        
+                        <div className="space-y-6 max-h-[700px] overflow-y-auto scrollbar-thin scrollbar-thumb-purple-100 dark:scrollbar-thumb-purple-900 pr-2">
                             {data?.description_rationale && (
                                 <div className="space-y-2">
-                                    <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Sobre a Descrição</h4>
-                                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed bg-white dark:bg-slate-900/50 p-3 rounded-lg border border-blue-50 dark:border-slate-700">
+                                    <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-purple-100 dark:border-purple-800 pb-1">Estratégia da Copy</h4>
+                                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
                                         {data.description_rationale}
                                     </p>
                                 </div>
@@ -137,19 +148,13 @@ const DescriptionResult: React.FC<DescriptionResultProps> = ({ text, data, onTex
 
                             {data?.chapters_rationale && (
                                 <div className="space-y-2">
-                                    <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Sobre os Capítulos</h4>
-                                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed bg-white dark:bg-slate-900/50 p-3 rounded-lg border border-blue-50 dark:border-slate-700">
+                                    <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-purple-100 dark:border-purple-800 pb-1">Retenção (Capítulos)</h4>
+                                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
                                         {data.chapters_rationale}
                                     </p>
                                 </div>
                             )}
                         </div>
-                    </div>
-
-                    <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-800/30 rounded-lg p-3">
-                        <p className="text-xs text-yellow-800 dark:text-yellow-500">
-                            <strong>Dica:</strong> Use este racional para entender a estratégia por trás da copy e aplicar em futuros vídeos.
-                        </p>
                     </div>
                 </div>
             )}

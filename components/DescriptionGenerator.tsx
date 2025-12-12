@@ -264,6 +264,11 @@ export const DescriptionGenerator: React.FC = () => {
     setIsHistoryOpen(false);
   };
 
+  const handleBackToConfig = () => {
+    setStep(2);
+    // Do NOT clear data, just go back
+  };
+
   const resetAll = () => {
     setStep(1);
     setGeneratedDescription(null);
@@ -513,6 +518,7 @@ export const DescriptionGenerator: React.FC = () => {
                 text={generatedDescription}
                 onTextChange={setGeneratedDescription}
                 onBack={resetAll}
+                onEditConfig={handleBackToConfig}
                 onSaveProject={handleSaveProject}
               />
             </div>
