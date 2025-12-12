@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CommentThread, replyToComment, rateComment, deleteComment } from '../../services/commentsService';
 import { VideoData } from '../../services/youtubeService';
-import { MessageSquare, ThumbsUp, ThumbsDown, Trash2, CornerDownRight, MoreVertical, PlaySquare, ExternalLink, Loader2, Heart } from 'lucide-react';
+import { MessageSquare, ThumbsUp, Trash2, CornerDownRight, Loader2, PlaySquare } from 'lucide-react';
 
 interface Props {
     thread: CommentThread;
@@ -39,28 +39,7 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
 
 
 
-    const handleDislike = async () => {
-        // Optimistic UI for Dislike? 
-        // We'll toggle the "none" / "dislike" state locally.
-        if (isRating) return;
 
-        setIsRating(true);
-        try {
-            await rateComment(topLevelComment.id, 'dislike');
-            // Reset viewer rating to dislike if successful
-            setViewerRating('none'); // Often simplest for toggle feel, or track 'dislike' state if API supports reading it back
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsRating(false);
-        }
-    };
-
-    // Heart is restricted, but we add the UI as requested.
-    const handleHeart = async () => {
-        // Placeholder for Heart action
-        alert("Funcionalidade de 'Amei' (Coração) é restrita pela API do YouTube para aplicativos de terceiros. Apenas o dono do canal pode dar coração via YouTube Studio.");
-    };
 
     const handleRate = async () => {
         if (isRating) return;
@@ -183,26 +162,6 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
                         <ThumbsUp size={14} className={viewerRating === 'like' ? 'fill-current' : ''} />
                         {likeCount > 0 ? likeCount : 'Curtir'}
                     </button>
-
-                    {/* Dislike Button */}
-                    <button
-                        onClick={handleDislike}
-                        className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                        title="Não gostei"
-                    >
-                        <ThumbsDown size={14} />
-                    </button>
-
-                    {/* Heart Button */}
-                    <button
-                        onClick={handleHeart}
-                        className="p-1.5 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                        title="Amei (Restrito)"
-                    >
-                        <Heart size={14} />
-                    </button>
-
-                    <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
 
                     {/* Delete Button (Hover only) */}
                     <button
