@@ -1,6 +1,8 @@
 import { getAccessToken } from './authService';
 
 const BASE_URL = 'https://www.googleapis.com/youtube/v3';
+// Use the same backend domain style as youtubeService, but targeting the new proxy-action endpoint
+const PROXY_ACTION_URL = 'https://yt-dashboard-backend.vercel.app/youtube/proxy-action';
 
 export interface CommentSnippet {
     authorDisplayName: string;
@@ -105,32 +107,37 @@ export const fetchComments = async (
     return await res.json();
 };
 
+
 export const replyToComment = async (parentId: string, text: string): Promise<ReplyResponse | null> => {
     const token = await getAccessToken();
     if (!token) throw new Error("Authentication required");
 
-    const url = `${BASE_URL}/comments?part=snippet`;
+    const endpoint = 'comments?part=snippet';
 
-    const body = {
+    const bodyData = {
         snippet: {
             parentId: parentId,
             textOriginal: text
         }
     };
 
-    const res = await fetch(url, {
+    const res = await fetch(PROXY_ACTION_URL, {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify({
+            token: token,
+            method: 'POST',
+            endpoint: endpoint,
+            data: bodyData
+        })
     });
 
     if (!res.ok) {
         const err = await res.json();
         console.error("Error replying to comment:", err);
-        throw new Error(err.error?.message || "Failed to reply");
+        throw new Error(err.message || "Failed to reply");
     }
 
     return await res.json();
@@ -140,13 +147,16 @@ export const deleteComment = async (commentId: string): Promise<boolean> => {
     const token = await getAccessToken();
     if (!token) throw new Error("Authentication required");
 
-    const url = `${BASE_URL}/comments?id=${commentId}`; // DELETE method
+    const endpoint = `comments?id=${commentId}`;
 
-    const res = await fetch(url, {
-        method: 'DELETE',
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
+    const res = await fetch(PROXY_ACTION_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            token: token,
+            method: 'DELETE',
+            endpoint: endpoint
+        })
     });
 
     if (!res.ok) {
@@ -154,7 +164,7 @@ export const deleteComment = async (commentId: string): Promise<boolean> => {
         return false;
     }
 
-    return true; // 204 No Content typically
+    return true;
 };
 
 export const setCommentModerationStatus = async (commentId: string, status: 'heldForReview' | 'published' | 'rejected'): Promise<boolean> => {
@@ -206,19 +216,20 @@ export const getMyChannelId = async (): Promise<string> => {
     throw new Error("No channel found for this user");
 };
 
-export const rateComment = async (commentId: string, rating: 'like' | 'none'): Promise<boolean> => {
+export const rateComment = async (commentId: string, rating: 'like' | 'none' | 'dislike'): Promise<boolean> => {
     const token = await getAccessToken();
     if (!token) throw new Error("Authentication required");
 
-    const url = `${BASE_URL}/comments/rate?id=${commentId}&rating=${rating}`;
+    const endpoint = `comments/rate?id=${commentId}&rating=${rating}`;
 
-    const res = await fetch(url, {
+    const res = await fetch(PROXY_ACTION_URL, {
         method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json' // Often required to avoid simple-request limitations or satisfy proxies
-        },
-        body: JSON.stringify({}) // Some endpoints require a body for POST
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            token: token,
+            method: 'POST',
+            endpoint: endpoint
+        })
     });
 
     if (!res.ok) {
