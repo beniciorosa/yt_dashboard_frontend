@@ -1,26 +1,48 @@
-import React from 'react';
-import { Download, FileText, Copy, Check, RefreshCw, Save, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Download, FileText, Copy, Check, RefreshCw, Save, Loader2, Lightbulb } from 'lucide-react';
 import { downloadTextFile, downloadDocFile } from '../../utils/fileHelpers';
+import { GeneratedContent } from '../../services/openaiService';
 
 interface DescriptionResultProps {
     text: string;
+    data?: GeneratedContent | null;
+    onTextChange: (text: string) => void;
     onBack: () => void;
     onSaveProject: () => Promise<void>;
 }
 
-const DescriptionResult: React.FC<DescriptionResultProps> = ({ text, onBack, onSaveProject }) => {
-    const [copied, setCopied] = React.useState(false);
-    const [saving, setSaving] = React.useState(false);
-    const [saved, setSaved] = React.useState(false);
+const DescriptionResult: React.FC<DescriptionResultProps> = ({ text, data, onTextChange, onBack, onSaveProject }) => {
+    const [editableText, setEditableText] = useState(text);
+    const [copied, setCopied] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+
+    useEffect(() => {
+        setEditableText(text);
+    }, [text]);
+
+    const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const newText = e.target.value;
+        setEditableText(newText);
+        onTextChange(newText);
+    };
 
     const handleCopy = () => {
-        navigator.clipboard.writeText(text);
+        navigator.clipboard.writeText(editableText);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
 
     const handleSave = async () => {
         setSaving(true);
+        // Note: Currently onSaveProject saves 'generatedDescription' from parent state. 
+        // Ideally we should pass the edited text back to parent, but for now let's assume the user copies or we update the parent state if needed.
+        // Actually, the request didn't strictly say we must update the parent state for saving to database, just "editable". 
+        // However, it's better UX if we could update the parent. For this iteration, I'll rely on the visual edit. 
+        // If 'onSaveProject' uses the parent state, it might save the OLD description.
+        // Let's stick to the visual requirement first, but to be safe, copy is what most users do.
+        // Or I can add an onChange prop prop to update parent. 
+        // Given existing props, I will just execute onSaveProject. Ideally I should refactor to update parent.
         await onSaveProject();
         setSaving(false);
         setSaved(true);
@@ -28,64 +50,109 @@ const DescriptionResult: React.FC<DescriptionResultProps> = ({ text, onBack, onS
     };
 
     return (
-        <div className="w-full bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col h-full max-h-[800px] transition-colors">
-            <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-center justify-between sticky top-0 z-10">
-                <div className="flex items-center gap-2">
-                    <FileText className="text-slate-500 dark:text-slate-400 w-5 h-5" />
-                    <h2 className="font-semibold text-slate-700 dark:text-slate-200">Descrição Gerada</h2>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={handleSave}
-                        disabled={saved || saving}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-md transition-all hover:shadow-sm ${saved
+        <div className="w-full flex flex-col lg:flex-row gap-6 h-full max-h-[800px]">
+
+            {/* Main Content - Editable Description */}
+            <div className="flex-grow bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col transition-colors">
+                <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-center justify-between sticky top-0 z-10">
+                    <div className="flex items-center gap-2">
+                        <FileText className="text-slate-500 dark:text-slate-400 w-5 h-5" />
+                        <h2 className="font-semibold text-slate-700 dark:text-slate-200">Descrição Gerada (Editável)</h2>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleSave}
+                            disabled={saved || saving}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-md transition-all hover:shadow-sm ${saved
                                 ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'
                                 : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
-                            }`}
-                    >
-                        {saving ? <Loader2 size={14} className="animate-spin" /> : (saved ? <Check size={14} /> : <Save size={14} />)}
-                        {saved ? 'Salvo!' : (saving ? 'Salvando...' : 'Salvar Projeto')}
-                    </button>
+                                }`}
+                        >
+                            {saving ? <Loader2 size={14} className="animate-spin" /> : (saved ? <Check size={14} /> : <Save size={14} />)}
+                            {saved ? 'Salvo!' : (saving ? 'Salvando...' : 'Salvar Projeto')}
+                        </button>
+                        <button
+                            onClick={handleCopy}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md transition-all hover:shadow-sm"
+                        >
+                            {copied ? <Check size={14} /> : <Copy size={14} />}
+                            {copied ? 'Copiado!' : 'Copiar'}
+                        </button>
+                    </div>
+                </div>
+
+                <textarea
+                    value={editableText}
+                    onChange={handleTextChange}
+                    className="flex-grow p-6 bg-white dark:bg-slate-800 font-mono text-sm leading-relaxed text-slate-800 dark:text-slate-300 resize-none outline-none focus:ring-2 focus:ring-inset focus:ring-green-500/20 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700"
+                    spellCheck={false}
+                />
+
+                <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <button
-                        onClick={handleCopy}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md transition-all hover:shadow-sm"
+                        onClick={onBack}
+                        className="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1"
                     >
-                        {copied ? <Check size={14} /> : <Copy size={14} />}
-                        {copied ? 'Copiado!' : 'Copiar'}
+                        <RefreshCw size={14} />
+                        Gerar nova descrição
                     </button>
+
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <button
+                            onClick={() => downloadTextFile(editableText, 'descricao-youtube.txt')}
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-400 dark:hover:border-slate-500 transition-all shadow-sm"
+                        >
+                            <Download size={16} />
+                            Baixar .txt
+                        </button>
+                        <button
+                            onClick={() => downloadDocFile(editableText, 'descricao-youtube.doc')}
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 border border-transparent rounded-lg transition-all shadow-sm"
+                        >
+                            <Download size={16} />
+                            Baixar .doc
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div className="p-6 overflow-y-auto bg-white dark:bg-slate-800 flex-grow font-mono text-sm leading-relaxed text-slate-800 dark:text-slate-300 whitespace-pre-wrap scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700">
-                {text}
-            </div>
+            {/* Sidebar - Rationale */}
+            {(data?.description_rationale || data?.chapters_rationale) && (
+                <div className="w-full lg:w-80 flex-shrink-0 space-y-4 animate-in slide-in-from-right-4">
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800/50 rounded-xl border border-blue-100 dark:border-slate-700 shadow-sm overflow-hidden">
+                        <div className="px-4 py-3 border-b border-blue-100 dark:border-slate-700 bg-white/50 dark:bg-slate-800/80 flex items-center gap-2">
+                            <Lightbulb className="w-4 h-4 text-amber-500" />
+                            <h3 className="font-semibold text-slate-800 dark:text-slate-200 text-sm">Racional da IA</h3>
+                        </div>
 
-            <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <button
-                    onClick={onBack}
-                    className="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1"
-                >
-                    <RefreshCw size={14} />
-                    Gerar nova descrição
-                </button>
+                        <div className="p-4 space-y-6 max-h-[700px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700">
+                            {data?.description_rationale && (
+                                <div className="space-y-2">
+                                    <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Sobre a Descrição</h4>
+                                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed bg-white dark:bg-slate-900/50 p-3 rounded-lg border border-blue-50 dark:border-slate-700">
+                                        {data.description_rationale}
+                                    </p>
+                                </div>
+                            )}
 
-                <div className="flex gap-2 w-full sm:w-auto">
-                    <button
-                        onClick={() => downloadTextFile(text, 'descricao-youtube.txt')}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-400 dark:hover:border-slate-500 transition-all shadow-sm"
-                    >
-                        <Download size={16} />
-                        Baixar .txt
-                    </button>
-                    <button
-                        onClick={() => downloadDocFile(text, 'descricao-youtube.doc')}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 border border-transparent rounded-lg transition-all shadow-sm"
-                    >
-                        <Download size={16} />
-                        Baixar .doc
-                    </button>
+                            {data?.chapters_rationale && (
+                                <div className="space-y-2">
+                                    <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Sobre os Capítulos</h4>
+                                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed bg-white dark:bg-slate-900/50 p-3 rounded-lg border border-blue-50 dark:border-slate-700">
+                                        {data.chapters_rationale}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-800/30 rounded-lg p-3">
+                        <p className="text-xs text-yellow-800 dark:text-yellow-500">
+                            <strong>Dica:</strong> Use este racional para entender a estratégia por trás da copy e aplicar em futuros vídeos.
+                        </p>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };

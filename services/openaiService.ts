@@ -2,6 +2,8 @@ export interface GeneratedContent {
     intro: string;
     chapters: string[];
     hashtags: string;
+    description_rationale?: string;
+    chapters_rationale?: string;
 }
 
 const BACKEND_URL = 'https://yt-dashboard-backend.vercel.app/openai';

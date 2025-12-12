@@ -12,6 +12,7 @@ import { Loader2, ArrowRight, Info, Sparkles, AlertTriangle, CheckCircle2, FileT
 export const DescriptionGenerator: React.FC = () => {
   const [step, setStep] = useState<1 | 2 | 3>(1); // 1: Audio Upload, 2: Config, 3: Result
   const [generatedDescription, setGeneratedDescription] = useState<string | null>(null);
+  const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null);
 
   // Processing States
   const [isProcessing, setIsProcessing] = useState(false);
@@ -235,6 +236,7 @@ export const DescriptionGenerator: React.FC = () => {
 
       const fullDescription = assembleFinalDescription(content);
       setGeneratedDescription(fullDescription);
+      setGeneratedContent(content);
 
       setTimeout(() => {
         setStep(3);
@@ -265,6 +267,7 @@ export const DescriptionGenerator: React.FC = () => {
   const resetAll = () => {
     setStep(1);
     setGeneratedDescription(null);
+    setGeneratedContent(null);
     setFileData(null);
     setTranscription(null);
     setError(null);
@@ -506,7 +509,9 @@ export const DescriptionGenerator: React.FC = () => {
           {step === 3 && generatedDescription && (
             <div className="space-y-6">
               <DescriptionResult
+                data={generatedContent}
                 text={generatedDescription}
+                onTextChange={setGeneratedDescription}
                 onBack={resetAll}
                 onSaveProject={handleSaveProject}
               />
