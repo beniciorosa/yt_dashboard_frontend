@@ -196,31 +196,37 @@ export const CommentsDashboard: React.FC = () => {
                         <Loader2 size={32} className="animate-spin text-pink-500" />
                         <p className="text-sm">Carregando comentários...</p>
                     </div>
-                ) : displayedComments.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center space-y-4 text-gray-400">
-                        <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-full">
-                            <MessageSquare size={32} />
-                        </div>
-                        <div className="text-center">
-                            <h3 className="text-gray-900 dark:text-white font-medium">Nenhum comentário encontrado</h3>
-                            <p className="text-sm mt-1 max-w-xs mx-auto">
-                                {showPendingOnly ? "Você respondeu a todos os comentários recentes!" : "Tente ajustar seus filtros de busca."}
-                            </p>
-                        </div>
-                    </div>
                 ) : (
-                    <div className="max-w-5xl mx-auto">
-                        {displayedComments.map(thread => (
-                            <CommentItem
-                                key={thread.id}
-                                thread={thread}
-                                video={videoCache[thread.snippet.videoId]}
-                                onReplySuccess={handleReplySuccess}
-                                onDeleteSuccess={handleDeleteSuccess}
-                            />
-                        ))}
+                    <div className="max-w-5xl mx-auto pb-20">
+                        {displayedComments.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-20 space-y-4 text-gray-400">
+                                <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-full">
+                                    <MessageSquare size={32} />
+                                </div>
+                                <div className="text-center">
+                                    <h3 className="text-gray-900 dark:text-white font-medium">
+                                        {nextPageToken ? "Nenhum comentário nesta página" : "Nenhum comentário encontrado"}
+                                    </h3>
+                                    <p className="text-sm mt-1 max-w-xs mx-auto">
+                                        {showPendingOnly
+                                            ? "Todos os comentários visíveis foram respondidos."
+                                            : "Tente ajustar seus filtros de busca."}
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            displayedComments.map(thread => (
+                                <CommentItem
+                                    key={thread.id}
+                                    thread={thread}
+                                    video={videoCache[thread.snippet.videoId]}
+                                    onReplySuccess={handleReplySuccess}
+                                    onDeleteSuccess={handleDeleteSuccess}
+                                />
+                            ))
+                        )}
 
-                        {/* Load More */}
+                        {/* Load More Button - Visible if token exists, regardless of list empty state */}
                         {nextPageToken && (
                             <div className="p-6 flex justify-center">
                                 <button
@@ -229,13 +235,10 @@ export const CommentsDashboard: React.FC = () => {
                                     className="px-6 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
                                 >
                                     {isLoadingMore && <Loader2 size={14} className="animate-spin" />}
-                                    Carregar Mais
+                                    Carregar Mais Antigos
                                 </button>
                             </div>
                         )}
-
-                        {/* Bottom Spacer */}
-                        <div className="h-20"></div>
                     </div>
                 )}
             </div>
