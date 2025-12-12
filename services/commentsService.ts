@@ -243,12 +243,12 @@ export const rateComment = async (commentId: string, rating: 'like' | 'none' | '
 
 const BACKEND_API_URL = 'https://yt-dashboard-backend.vercel.app/comments';
 
-export const generateAiReply = async (commentText: string, videoTitle?: string, style: string = 'professional'): Promise<string> => {
+export const generateAiReply = async (commentText: string, videoTitle?: string, style: string = 'professional', authorName?: string): Promise<string> => {
     try {
         const res = await fetch(`${BACKEND_API_URL}/generate-reply`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ commentText, videoTitle, style })
+            body: JSON.stringify({ commentText, videoTitle, style, authorName })
         });
 
         if (!res.ok) {

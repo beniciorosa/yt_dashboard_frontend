@@ -34,7 +34,7 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
     const handleAiReply = async () => {
         setIsGeneratingAi(true);
         try {
-            const reply = await generateAiReply(snippet.textOriginal, video?.title, aiStyle);
+            const reply = await generateAiReply(snippet.textOriginal, video?.title, aiStyle, snippet.authorDisplayName);
             setReplyText(reply);
         } catch (error) {
             alert("Erro ao gerar resposta com IA.");
