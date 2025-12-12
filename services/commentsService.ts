@@ -71,7 +71,17 @@ export const fetchComments = async (
     if (params.videoId) {
         url.searchParams.append('videoId', params.videoId);
     } else {
-        url.searchParams.append('allThreadsRelatedToChannelId', 'MINE'); // Default to my channel
+        // Resolve Channel ID if not provided
+        let channelId = params.allThreadsRelatedToChannelId;
+        if (!channelId || channelId === 'MINE') {
+            try {
+                channelId = await getMyChannelId();
+            } catch (e) {
+                console.warn("Failed to resolve channel ID, defaulting to MINE", e);
+                channelId = 'MINE';
+            }
+        }
+        url.searchParams.append('allThreadsRelatedToChannelId', channelId);
     }
 
     if (params.order) url.searchParams.append('order', params.order);
@@ -175,6 +185,26 @@ export const setCommentModerationStatus = async (commentId: string, status: 'hel
 // However, we will assume for now we can't easily "Pin" via standard v3 without potential workaround or specific permission.
 // I'll leave a placeholder or try `update` if I find `isPinned` is writable, but docs say it's read-only.
 // Let's implement 'Heart' (ViewerRating) instead as requested "curtir, dar coração".
+
+// Helper to get Channel ID
+export const getMyChannelId = async (): Promise<string> => {
+    const token = await getAccessToken();
+    if (!token) throw new Error("Authentication required");
+
+    const res = await fetch(`${BASE_URL}/channels?part=id&mine=true`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (!res.ok) throw new Error("Failed to fetch channel ID");
+
+    const data = await res.json();
+    if (data.items && data.items.length > 0) {
+        return data.items[0].id;
+    }
+    throw new Error("No channel found for this user");
+};
 
 export const rateComment = async (commentId: string, rating: 'like' | 'none'): Promise<boolean> => {
     const token = await getAccessToken();
