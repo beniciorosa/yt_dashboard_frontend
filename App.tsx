@@ -6,12 +6,13 @@ import { ChannelDashboard } from './components/ChannelDashboard';
 import { DescriptionGenerator } from './components/DescriptionGenerator';
 import { SettingsModal } from './components/SettingsModal';
 import { UtmGenerator } from './components/UtmGenerator';
+import { CommentsDashboard } from './components/Comments/CommentsDashboard';
 import { handleAuthCallback, initiateLogin, logout, isAuthenticated, getAccessToken } from './services/authService';
 import { Loader2, Wrench } from 'lucide-react';
 
 const App: React.FC = () => {
   // Updated state type to include new tool modules
-  const [activeModule, setActiveModule] = useState<'dashboard' | 'competitors' | 'description-gen' | 'utm-gen'>('competitors');
+  const [activeModule, setActiveModule] = useState<'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments'>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -124,6 +125,7 @@ const App: React.FC = () => {
             {activeModule === 'competitors' && 'Ferramentas de YouTube'}
             {activeModule === 'description-gen' && 'Gerador de Descrição'}
             {activeModule === 'utm-gen' && 'Gerador de UTM'}
+            {activeModule === 'comments' && 'Gestão de Comentários'}
           </h2>
           <div className="flex items-center gap-4">
             <span className="text-xs text-gray-400 hidden md:inline">v1.8.2</span>
@@ -144,6 +146,10 @@ const App: React.FC = () => {
 
           {activeModule === 'utm-gen' && (
             <UtmGenerator />
+          )}
+
+          {activeModule === 'comments' && (
+            <CommentsDashboard />
           )}
         </main>
       </div>

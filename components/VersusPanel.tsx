@@ -158,6 +158,33 @@ export const VersusPanel: React.FC<Props> = ({ className, currentCompetitor, onC
     const currentStats = calculateStats(currentCompetitor);
     const opponentStats = calculateStats(opponent);
 
+    // Determine Winner
+    // Points system: 1 point for each metric won (Total: Subs, Views, Vids | Growth: Subs, Views, Vids)
+    let winner: 'current' | 'opponent' | 'tie' = 'current';
+
+    if (opponent && currentStats && opponentStats) {
+        let scoreCurrent = 0;
+        let scoreOpponent = 0;
+
+        const compare = (valA: number, valB: number) => {
+            if (valA > valB) scoreCurrent++;
+            else if (valB > valA) scoreOpponent++;
+        };
+
+        // Total Stats
+        compare(currentStats.subscribers, opponentStats.subscribers);
+        compare(currentStats.views, opponentStats.views);
+        compare(currentStats.videos, opponentStats.videos);
+
+        // Growth Stats
+        compare(currentStats.growth.subs, opponentStats.growth.subs);
+        compare(currentStats.growth.views, opponentStats.growth.views);
+        compare(currentStats.growth.videos, opponentStats.growth.videos);
+
+        if (scoreOpponent > scoreCurrent) winner = 'opponent';
+        else if (scoreOpponent === scoreCurrent) winner = 'tie';
+    }
+
     // Helper to render comparison row
     // NOTE: Swapped order: Left = Current (Champion), Right = Opponent
     const renderStatRow = (
@@ -258,27 +285,55 @@ export const VersusPanel: React.FC<Props> = ({ className, currentCompetitor, onC
                 {/* HEAD TO HEAD COMPARISON - SWAPPED ORDER */}
                 <div className="grid grid-cols-2 gap-4 mb-6">
 
-                    {/* Left Box (Current / Champion) */}
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex flex-col items-center text-center shadow-lg relative overflow-hidden order-1">
-                        <div className="absolute top-0 right-0 p-2 opacity-10">
-                            <Trophy size={64} />
-                        </div>
-                        <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/50 mb-3 shadow-md z-10">
+                    {/* Left Box (Current) */}
+                    <div className={`p-4 rounded-xl flex flex-col items-center text-center shadow-lg relative overflow-hidden order-1 transition-all ${winner === 'current' || winner === 'tie' // Default to current on tie or win
+                        ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
+                        : 'bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700'
+                        }`}>
+                        {(winner === 'current' || winner === 'tie') && (
+                            <div className="absolute top-0 right-0 p-2 opacity-10">
+                                <Trophy size={64} />
+                            </div>
+                        )}
+
+                        <div className={`w-16 h-16 rounded-full overflow-hidden mb-3 shadow-md z-10 ${winner === 'current' || winner === 'tie' ? 'border-2 border-white/50' : 'border-2 border-indigo-100 dark:border-gray-600'
+                            }`}>
                             <img src={currentCompetitor.avatarUrl || '/placeholder.png'} className="w-full h-full object-cover" />
                         </div>
-                        <h3 className="font-bold text-white line-clamp-1 z-10">{currentCompetitor.channelName}</h3>
-                        <p className="text-xs text-indigo-100 z-10">Campeão Atual</p>
+                        <h3 className={`font-bold line-clamp-1 z-10 ${winner === 'current' || winner === 'tie' ? 'text-white' : 'text-slate-800 dark:text-white'}`}>
+                            {currentCompetitor.channelName}
+                        </h3>
+                        <p className={`text-xs z-10 ${winner === 'current' || winner === 'tie' ? 'text-indigo-100' : 'text-gray-500'}`}>
+                            {winner === 'current' || winner === 'tie' ? 'Campeão Atual' : 'Desafiante'}
+                        </p>
                     </div>
 
                     {/* Right Box (Opponent / Challenger) */}
-                    <div className={`p-4 rounded-xl border flex flex-col items-center text-center transition-all order-2 ${opponent ? 'bg-white dark:bg-slate-800 border-indigo-100 dark:border-indigo-900 shadow-sm' : 'border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800/50'}`}>
+                    {/* Right Box (Opponent) */}
+                    <div className={`p-4 rounded-xl flex flex-col items-center text-center transition-all order-2 relative overflow-hidden shadow-lg ${!opponent
+                        ? 'border-dashed border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800/50 shadow-none'
+                        : winner === 'opponent'
+                            ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
+                            : 'bg-white dark:bg-slate-800 border border-indigo-100 dark:border-indigo-900 shadow-sm'
+                        }`}>
+                        {winner === 'opponent' && (
+                            <div className="absolute top-0 right-0 p-2 opacity-10">
+                                <Trophy size={64} />
+                            </div>
+                        )}
+
                         {opponent ? (
                             <>
-                                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-indigo-500 mb-3 shadow-md">
+                                <div className={`w-16 h-16 rounded-full overflow-hidden mb-3 shadow-md z-10 ${winner === 'opponent' ? 'border-2 border-white/50' : 'border-2 border-indigo-500'
+                                    }`}>
                                     <img src={opponent.avatarUrl || '/placeholder.png'} className="w-full h-full object-cover" />
                                 </div>
-                                <h3 className="font-bold text-slate-800 dark:text-white line-clamp-1">{opponent.channelName}</h3>
-                                <p className="text-xs text-gray-500">Desafiante</p>
+                                <h3 className={`font-bold line-clamp-1 z-10 ${winner === 'opponent' ? 'text-white' : 'text-slate-800 dark:text-white'}`}>
+                                    {opponent.channelName}
+                                </h3>
+                                <p className={`text-xs z-10 ${winner === 'opponent' ? 'text-indigo-100' : 'text-gray-500'}`}>
+                                    {winner === 'opponent' ? 'Campeão Atual' : 'Desafiante'}
+                                </p>
                             </>
                         ) : (
                             <div className="h-32 flex flex-col items-center justify-center text-gray-400">
@@ -318,8 +373,8 @@ export const VersusPanel: React.FC<Props> = ({ className, currentCompetitor, onC
                                             key={r}
                                             onClick={() => setTimeRange(r)}
                                             className={`px-2 py-1 text-[10px] font-bold rounded-md transition-all ${timeRange === r
-                                                    ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                                                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                                ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                                                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                                                 }`}
                                         >
                                             {r === 'all' ? 'Início' : `${r}d`}

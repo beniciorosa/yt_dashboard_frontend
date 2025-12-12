@@ -143,7 +143,7 @@ export const fetchYoutubeChannelData = async (input: string): Promise<{ competit
     };
 };
 
-const fetchVideoDetailsByIds = async (videoIds: string[]): Promise<VideoData[]> => {
+export const fetchVideoDetailsByIds = async (videoIds: string[]): Promise<VideoData[]> => {
     if (videoIds.length === 0) return [];
 
     const statsData = await fetchFromProxy('videos', {
