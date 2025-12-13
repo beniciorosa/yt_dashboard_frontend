@@ -86,7 +86,15 @@ export const fetchComments = async (
         url.searchParams.append('allThreadsRelatedToChannelId', channelId);
     }
 
-    if (params.order) url.searchParams.append('order', params.order);
+    if (params.order) {
+        // API Constraint: 'relevance' order is NOT supported for channel-wide comments (allThreadsRelatedToChannelId).
+        // It requires a specific videoId. We fallback to 'time' to avoid 400 Bad Request.
+        if (!params.videoId && params.order === 'relevance') {
+            url.searchParams.append('order', 'time');
+        } else {
+            url.searchParams.append('order', params.order);
+        }
+    }
     if (params.searchTerms) url.searchParams.append('searchTerms', params.searchTerms);
     if (params.pageToken) url.searchParams.append('pageToken', params.pageToken);
     if (params.maxResults) url.searchParams.append('maxResults', params.maxResults.toString());
