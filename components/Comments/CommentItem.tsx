@@ -117,6 +117,8 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
     const handleRate = async () => {
         if (isRating) return;
 
+        console.log("CURTIR commentId:", topLevelComment.id);
+
         // Optimistic update
         const oldRating = viewerRating;
         const newRating = oldRating === 'like' ? 'none' : 'like';

@@ -228,7 +228,8 @@ export const rateComment = async (commentId: string, rating: 'like' | 'none'): P
     const token = await getAccessToken();
     if (!token) throw new Error("Authentication required");
 
-    const endpoint = `comments/rate?id=${encodeURIComponent(commentId)}&rating=${rating}`;
+    const endpoint = 'comments/rate';
+    const params = { id: commentId, rating: rating };
 
     const res = await fetch(PROXY_ACTION_URL, {
         method: 'POST',
@@ -236,7 +237,9 @@ export const rateComment = async (commentId: string, rating: 'like' | 'none'): P
         body: JSON.stringify({
             token: token,
             method: 'POST',
-            endpoint: endpoint
+            endpoint: endpoint,
+            params: params,
+            // Header Content-Length: 0 will be handled by backend if 'data' is undefined/null
         })
     });
 
