@@ -228,7 +228,7 @@ export const rateComment = async (commentId: string, rating: 'like' | 'none'): P
     const token = await getAccessToken();
     if (!token) throw new Error("Authentication required");
 
-    const endpoint = `comments/rate?id=${commentId}&rating=${rating}`;
+    const endpoint = `comments/rate?id=${encodeURIComponent(commentId)}&rating=${rating}`;
 
     const res = await fetch(PROXY_ACTION_URL, {
         method: 'POST',
