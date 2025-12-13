@@ -155,15 +155,18 @@ export const deleteComment = async (commentId: string): Promise<boolean> => {
     const token = await getAccessToken();
     if (!token) throw new Error("Authentication required");
 
-    const endpoint = `comments?id=${commentId}`;
+    const endpoint = 'comments'; // DELETE /comments?id=...
+    const params = { id: commentId };
 
     const res = await fetch(PROXY_ACTION_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             token: token,
-            method: 'DELETE',
-            endpoint: endpoint
+            method: 'DELETE', // Method for Google API
+            endpoint: endpoint,
+            params: params,
+            // DELETE usually has no body, so data is undefined, proxy sends Content-Length: 0 if needed (or just no body)
         })
     });
 
