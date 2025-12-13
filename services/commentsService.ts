@@ -224,7 +224,7 @@ export const getMyChannelId = async (): Promise<string> => {
     throw new Error("No channel found for this user");
 };
 
-export const rateComment = async (commentId: string, rating: 'like' | 'none' | 'dislike'): Promise<boolean> => {
+export const rateComment = async (commentId: string, rating: 'like' | 'none'): Promise<boolean> => {
     const token = await getAccessToken();
     if (!token) throw new Error("Authentication required");
 
