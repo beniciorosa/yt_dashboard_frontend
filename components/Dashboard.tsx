@@ -4,7 +4,8 @@ import { Competitor } from '../types';
 import { fetchCompetitors, addCompetitor, toggleCompetitorVisibility, deleteCompetitor, addSnapshot, toggleCompetitorPin, updateCompetitorAvatar } from '../services/storageService';
 import { fetchYoutubeChannelData } from '../services/youtubeService';
 import { CompetitorForm } from './CompetitorForm';
-import { Plus, Users, Video, ChevronRight, Loader2, Trash2, GripVertical, LayoutGrid, List, RefreshCw, AlertTriangle, ArrowUpDown, Pin, Clapperboard, TrendingUp, User, Eye } from 'lucide-react';
+import { VersusPanel } from './VersusPanel';
+import { Plus, Users, Video, ChevronRight, Loader2, Trash2, GripVertical, LayoutGrid, List, RefreshCw, AlertTriangle, ArrowUpDown, Pin, Clapperboard, TrendingUp, User, Eye, Swords } from 'lucide-react';
 
 interface Props {
     onSelect: (id: string) => void;
@@ -15,6 +16,7 @@ type SortOption = 'custom' | 'subscribers' | 'videos' | 'views' | 'growth' | 'ne
 export const CompetitorsList: React.FC<Props> = ({ onSelect }) => {
     const [competitors, setCompetitors] = useState<Competitor[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [versusOpen, setVersusOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -536,6 +538,20 @@ export const CompetitorsList: React.FC<Props> = ({ onSelect }) => {
                         )}
 
                         <button
+                            onClick={() => {
+                                const myChannel = competitors.find(c => c.isMyChannel);
+                                if (myChannel) {
+                                    setVersusOpen(true);
+                                } else {
+                                    alert("Defina seu canal principal primeiro!");
+                                }
+                            }}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all hover:shadow-md font-medium flex-1 sm:flex-none text-sm"
+                        >
+                            <Swords size={16} /> <span className="whitespace-nowrap">VERSUS</span>
+                        </button>
+
+                        <button
                             onClick={() => setIsModalOpen(true)}
                             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all hover:shadow-md font-medium flex-1 sm:flex-none text-sm"
                         >
@@ -604,6 +620,13 @@ export const CompetitorsList: React.FC<Props> = ({ onSelect }) => {
 
             {isModalOpen && (
                 <CompetitorForm onClose={() => setIsModalOpen(false)} onSave={handleSave} />
+            )}
+
+            {versusOpen && (
+                <VersusPanel
+                    currentCompetitor={competitors.find(c => c.isMyChannel)!}
+                    onClose={() => setVersusOpen(false)}
+                />
             )}
         </div>
     );

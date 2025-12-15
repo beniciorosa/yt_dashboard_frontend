@@ -10,7 +10,7 @@ const getEnv = (key: string, fallback: string) => {
     }
 };
 
-const supabaseUrl = getEnv('VITE_SUPABASE_URL', 'https://xsqpqdjffjqxdcmoytfc.supabase.co');
+const supabaseUrl = getEnv('VITE_SUPABASE_URL', 'https://qytuhvqggsleohxndtqz.supabase.co');
 const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY', 'sb_publishable_sh61Cu1Z0OBSEeD0hgzt8A_JQewGsae');
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
