@@ -51,11 +51,10 @@ const getTodayString = () => {
 
 const getFormattedDateForSlug = (dateString: string) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = String(date.getFullYear()).slice(-2);
-    return `${day}${month}${year}`;
+    // Fix: Parse string directly to avoid timezone issues (YYYY-MM-DD)
+    const [year, month, day] = dateString.split('-');
+    if (!year || !month || !day) return '';
+    return `${day}${month}${year.slice(-2)}`;
 };
 
 const parseTimestamp = (dateString: string | null | undefined): number => {
@@ -112,7 +111,7 @@ export const UtmGenerator: React.FC = () => {
 
     const loadDrafts = async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/utm/links`);
+            const res = await fetch(`${API_BASE_URL}/api/utm/links`);
             if (!res.ok) return;
             const data = await res.json();
 
@@ -211,7 +210,7 @@ export const UtmGenerator: React.FC = () => {
         };
 
         try {
-            const res = await fetch(`${API_BASE_URL}/utm/links`, {
+            const res = await fetch(`${API_BASE_URL}/api/utm/links`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -229,7 +228,7 @@ export const UtmGenerator: React.FC = () => {
     const deleteSession = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         try {
-            await fetch(`${API_BASE_URL}/utm/links/${id}`, { method: 'DELETE' });
+            await fetch(`${API_BASE_URL}/api/utm/links/${id}`, { method: 'DELETE' });
             setSessions(prev => prev.filter(s => s.id !== id));
         } catch (e) { console.error("Erro ao deletar", e); }
     };
@@ -244,7 +243,7 @@ export const UtmGenerator: React.FC = () => {
         const prefix = `yt-${formattedDate}`;
 
         try {
-            const res = await fetch(`${API_BASE_URL}/utm/slug`, {
+            const res = await fetch(`${API_BASE_URL}/api/utm/slug`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title: title })
@@ -269,7 +268,7 @@ export const UtmGenerator: React.FC = () => {
         setIsShortening(true);
         setError(null);
         try {
-            const res = await fetch(`${API_BASE_URL}/utm/shorten`, {
+            const res = await fetch(`${API_BASE_URL}/api/utm/shorten`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -302,7 +301,7 @@ export const UtmGenerator: React.FC = () => {
                 is_draft: false
             };
 
-            await fetch(`${API_BASE_URL}/utm/links`, {
+            await fetch(`${API_BASE_URL}/api/utm/links`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
