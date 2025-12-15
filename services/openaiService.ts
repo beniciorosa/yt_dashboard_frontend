@@ -6,7 +6,7 @@ export interface GeneratedContent {
     chapters_rationale?: string;
 }
 
-const API_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080') + '/openai';
+const API_URL = (import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080' : 'https://yt-dashboard-backend.vercel.app')) + '/openai';
 
 export const transcribeAudioOpenAI = async (fileUrl: string): Promise<string> => {
     try {

@@ -31,7 +31,7 @@ export interface VideoData {
 }
 
 const ANALYTICS_URL = 'https://youtubeanalytics.googleapis.com/v2/reports';
-const API_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080') + '/api/youtube/proxy';
+const API_URL = (import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080' : 'https://yt-dashboard-backend.vercel.app')) + '/api/youtube/proxy';
 
 const fetchFromProxy = async (endpoint: string, params: Record<string, string>) => {
     const url = new URL(API_URL);

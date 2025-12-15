@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 // @ts-ignore
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080' : 'https://yt-dashboard-backend.vercel.app');
 
 interface UTMParams {
     source: string;
