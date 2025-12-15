@@ -10,7 +10,7 @@ const API_URL = (import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'htt
 
 export const analyzeCompetitor = async (data: any) => {
     try {
-        const response = await fetch(`${API_URL}/openai/analyze-competitor`, {
+        const response = await fetch(`${API_URL}/analyze-competitor`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
