@@ -8,6 +8,27 @@ export interface GeneratedContent {
 
 const API_URL = (import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080' : 'https://yt-dashboard-backend.vercel.app')) + '/api/openai';
 
+export const analyzeCompetitor = async (data: any) => {
+    try {
+        const response = await fetch(`${API_URL}/openai/analyze-competitor`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+            throw new Error('Falha ao analisar competidor');
+        }
+
+        return await response.text();
+    } catch (error) {
+        console.error("Erro na análise de IA:", error);
+        throw error;
+    }
+};
+
 export const transcribeAudioOpenAI = async (fileUrl: string): Promise<string> => {
     try {
         console.log("Iniciando transcrição via Backend (URL)...");

@@ -5,6 +5,7 @@ import { UpdateForm } from './UpdateForm';
 import { StatsChart } from './Charts';
 import { fetchCompetitorById, addSnapshot, deleteSnapshot, fetchMyChannel, updateCompetitorCategory, updateCompetitorAvatar } from '../services/storageService';
 // import { analyzeCompetitorGrowth } from '../services/geminiService';
+import { analyzeCompetitor } from '../services/openaiService';
 import { fetchYoutubeChannelData, fetchCompetitorContent, VideoData } from '../services/youtubeService';
 import { VersusPanel } from './VersusPanel';
 import { ArrowLeft, ExternalLink, Calendar, MapPin, Video, Eye, Users, BrainCircuit, Loader2, Trash2, ArrowRightLeft, RefreshCw, AlertTriangle, Flame, Clock, Edit2, Check, X, ThumbsUp, MessageCircle, Swords } from 'lucide-react';
@@ -146,10 +147,30 @@ export const CompetitorDetail: React.FC<Props> = ({ competitorId, onBack }) => {
 
   const handleAiAnalysis = async () => {
     setIsLoadingAi(true);
-    // const result = await analyzeCompetitorGrowth(competitor);
-    // setAiAnalysis(result);
-    setAiAnalysis("Análise de IA desativada temporariamente para migração para OpenAI.");
-    setIsLoadingAi(false);
+    try {
+      const data = {
+        competitorStats: {
+          channelName: competitor.channelName,
+          subscriberCount: latest.subscribers,
+          viewCount: latest.views,
+          videoCount: latest.videos,
+        },
+        topVideos: topVideos,
+        recentVideos: recentVideos,
+        myChannelStats: myChannel ? {
+          channelName: myChannel.channelName,
+          subscriberCount: myChannel.snapshots[myChannel.snapshots.length - 1]?.subscribers || 0,
+        } : null,
+        isMyChannel: competitor.isMyChannel
+      };
+
+      const result = await analyzeCompetitor(data);
+      setAiAnalysis(result);
+    } catch (error) {
+      alert("Erro ao realizar análise de IA. Verifique se há vídeos carregados.");
+    } finally {
+      setIsLoadingAi(false);
+    }
   };
 
   const formatDisplayDate = (dateStr: string) => {
