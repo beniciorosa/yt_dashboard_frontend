@@ -4,7 +4,7 @@ import { Competitor, StatSnapshot } from '../types';
 import { UpdateForm } from './UpdateForm';
 import { StatsChart } from './Charts';
 import { fetchCompetitorById, addSnapshot, deleteSnapshot, fetchMyChannel, updateCompetitorCategory, updateCompetitorAvatar } from '../services/storageService';
-import { analyzeCompetitorGrowth } from '../services/geminiService';
+// import { analyzeCompetitorGrowth } from '../services/geminiService';
 import { fetchYoutubeChannelData, fetchCompetitorContent, VideoData } from '../services/youtubeService';
 import { VersusPanel } from './VersusPanel';
 import { ArrowLeft, ExternalLink, Calendar, MapPin, Video, Eye, Users, BrainCircuit, Loader2, Trash2, ArrowRightLeft, RefreshCw, AlertTriangle, Flame, Clock, Edit2, Check, X, ThumbsUp, MessageCircle, Swords } from 'lucide-react';
@@ -146,8 +146,9 @@ export const CompetitorDetail: React.FC<Props> = ({ competitorId, onBack }) => {
 
   const handleAiAnalysis = async () => {
     setIsLoadingAi(true);
-    const result = await analyzeCompetitorGrowth(competitor);
-    setAiAnalysis(result);
+    // const result = await analyzeCompetitorGrowth(competitor);
+    // setAiAnalysis(result);
+    setAiAnalysis("Análise de IA desativada temporariamente para migração para OpenAI.");
     setIsLoadingAi(false);
   };
 

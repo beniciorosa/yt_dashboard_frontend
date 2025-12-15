@@ -2,7 +2,8 @@ import { getAccessToken } from './authService';
 
 const BASE_URL = 'https://www.googleapis.com/youtube/v3';
 // Use the same backend domain style as youtubeService, but targeting the new proxy-action endpoint
-const PROXY_ACTION_URL = 'https://yt-dashboard-backend.vercel.app/youtube/proxy-action';
+const API_BASE_ROOT = (import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080' : 'https://yt-dashboard-backend.vercel.app')) + '/api';
+const PROXY_ACTION_URL = `${API_BASE_ROOT}/youtube/proxy-action`;
 
 export interface CommentSnippet {
     authorDisplayName: string;
@@ -255,7 +256,7 @@ export const rateComment = async (commentId: string, rating: 'like' | 'none'): P
 
 // --- AI & Quick Replies ---
 
-const BACKEND_API_URL = (import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080' : 'https://yt-dashboard-backend.vercel.app')) + '/api/comments';
+const BACKEND_API_URL = `${API_BASE_ROOT}/comments`;
 
 export const generateAiReply = async (commentText: string, videoTitle?: string, style: string = 'professional', authorName?: string): Promise<string> => {
     try {
