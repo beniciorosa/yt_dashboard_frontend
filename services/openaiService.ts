@@ -41,7 +41,7 @@ export const generateDescriptionOpenAI = async (
     try {
         console.log("Enviando solicitação de descrição para Backend...");
 
-        const response = await fetch(`${BACKEND_URL}/generate-description`, {
+        const response = await fetch(`${API_URL}/generate-description`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -71,7 +71,7 @@ export const generateEmailOpenAI = async (
     videoUrl: string
 ): Promise<{ subject: string; body: string }> => {
     try {
-        const response = await fetch(`${BACKEND_URL}/generate-email`, {
+        const response = await fetch(`${API_URL}/generate-email`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
