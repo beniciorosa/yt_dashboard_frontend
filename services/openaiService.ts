@@ -6,13 +6,13 @@ export interface GeneratedContent {
     chapters_rationale?: string;
 }
 
-const BACKEND_URL = 'https://yt-dashboard-backend.vercel.app/openai';
+const API_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080') + '/openai';
 
 export const transcribeAudioOpenAI = async (fileUrl: string): Promise<string> => {
     try {
         console.log("Iniciando transcrição via Backend (URL)...");
 
-        const response = await fetch(`${BACKEND_URL}/transcribe`, {
+        const response = await fetch(`${API_URL}/transcribe`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

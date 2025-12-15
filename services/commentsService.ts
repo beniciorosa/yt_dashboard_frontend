@@ -255,7 +255,7 @@ export const rateComment = async (commentId: string, rating: 'like' | 'none'): P
 
 // --- AI & Quick Replies ---
 
-const BACKEND_API_URL = 'https://yt-dashboard-backend.vercel.app/comments';
+const BACKEND_API_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080') + '/comments';
 
 export const generateAiReply = async (commentText: string, videoTitle?: string, style: string = 'professional', authorName?: string): Promise<string> => {
     try {

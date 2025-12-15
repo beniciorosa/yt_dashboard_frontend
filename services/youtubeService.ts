@@ -31,10 +31,10 @@ export interface VideoData {
 }
 
 const ANALYTICS_URL = 'https://youtubeanalytics.googleapis.com/v2/reports';
-const PROXY_URL = 'https://yt-dashboard-backend.vercel.app/youtube/proxy';
+const API_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080') + '/api/youtube';/proxy';
 
 const fetchFromProxy = async (endpoint: string, params: Record<string, string>) => {
-    const url = new URL(PROXY_URL);
+    const url = new URL(API_URL);
     url.searchParams.append('endpoint', endpoint);
     Object.keys(params).forEach(key => {
         if (params[key] !== undefined && params[key] !== null) {
