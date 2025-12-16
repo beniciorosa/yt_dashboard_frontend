@@ -13,7 +13,7 @@ export const PromotionsDashboard: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const [sortKey, setSortKey] = useState<SortKey>('data_criacao');
+    const [sortKey, setSortKey] = useState<SortKey>('inscritos');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
     const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
 
@@ -69,6 +69,10 @@ export const PromotionsDashboard: React.FC = () => {
         return list;
     }, [promotions, sortKey, sortDirection, searchQuery]);
 
+    const activeCount = useMemo(() => {
+        return promotions.filter(p => p.status === 'Ativa' || p.status === 'Active').length;
+    }, [promotions]);
+
     const totals = useMemo(() => {
         const sum = processedPromotions.reduce((acc, curr) => ({
             custo: acc.custo + (curr.custo || 0),
@@ -116,6 +120,9 @@ export const PromotionsDashboard: React.FC = () => {
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                         <Tag className="text-blue-600" />
                         Minhas Promoções
+                        <span className="text-sm font-normal text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full ml-2">
+                            {activeCount} ativas
+                        </span>
                     </h1>
                     <p className="text-gray-500 text-sm mt-1">
                         Gerencie suas campanhas ativas do YouTube Promotions.
@@ -238,6 +245,9 @@ export const PromotionsDashboard: React.FC = () => {
                                     >
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3 min-w-[300px]">
+                                                <span className="text-gray-400 font-medium text-xs w-6 text-right">
+                                                    #{idx + 1}
+                                                </span>
                                                 <div className="w-20 h-12 shrink-0 rounded overflow-hidden bg-gray-200 dark:bg-gray-600 shadow-sm">
                                                     {thumb ? (
                                                         <img src={thumb} alt="" className="w-full h-full object-cover" />
