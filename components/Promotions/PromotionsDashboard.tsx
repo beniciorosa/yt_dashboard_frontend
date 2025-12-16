@@ -245,9 +245,6 @@ export const PromotionsDashboard: React.FC = () => {
                                     >
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3 min-w-[300px]">
-                                                <span className="text-gray-400 font-medium text-xs w-6 text-right">
-                                                    #{idx + 1}
-                                                </span>
                                                 <div className="w-20 h-12 shrink-0 rounded overflow-hidden bg-gray-200 dark:bg-gray-600 shadow-sm">
                                                     {thumb ? (
                                                         <img src={thumb} alt="" className="w-full h-full object-cover" />
