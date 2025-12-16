@@ -1,10 +1,10 @@
 // --- START OF FILE components/Sidebar.tsx ---
 import React from 'react';
-import { LayoutDashboard, LineChart, ChevronLeft, ChevronRight, BarChart3, Settings, Type, Link, Wrench, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, LineChart, ChevronLeft, ChevronRight, BarChart3, Settings, Type, Link, Wrench, MessageSquare, Megaphone } from 'lucide-react';
 
 interface Props {
-  activeModule: 'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments';
-  onNavigate: (module: 'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments') => void;
+  activeModule: 'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments' | 'promotions';
+  onNavigate: (module: 'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments' | 'promotions') => void;
   isCollapsed: boolean;
   toggleCollapse: () => void;
   onOpenSettings: () => void;
@@ -47,8 +47,8 @@ export const Sidebar: React.FC<Props> = ({
           <button
             onClick={() => onNavigate('dashboard')}
             className={`w-full flex items-center p-3 rounded-lg transition-colors mb-1 ${activeModule === 'dashboard'
-                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
+              ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
               }`}
             title="Channel Dashboard"
           >
@@ -59,8 +59,8 @@ export const Sidebar: React.FC<Props> = ({
           <button
             onClick={() => onNavigate('competitors')}
             className={`w-full flex items-center p-3 rounded-lg transition-colors ${activeModule === 'competitors'
-                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
+              ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
               }`}
             title="Análise de Concorrência"
           >
@@ -79,11 +79,24 @@ export const Sidebar: React.FC<Props> = ({
             <div className="h-px bg-gray-200 dark:bg-gray-700 my-4 mx-2"></div>
           )}
 
+
+          <button
+            onClick={() => onNavigate('promotions')}
+            className={`w-full flex items-center p-3 rounded-lg transition-colors mb-1 ${activeModule === 'promotions'
+              ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
+              }`}
+            title="Promoções"
+          >
+            <Megaphone size={20} className="shrink-0" />
+            {!isCollapsed && <span className="ml-3 font-medium whitespace-nowrap">Promoções</span>}
+          </button>
+
           <button
             onClick={() => onNavigate('description-gen')}
             className={`w-full flex items-center p-3 rounded-lg transition-colors mb-1 ${activeModule === 'description-gen'
-                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
+              ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
               }`}
             title="Gerador de Descrição"
           >
@@ -94,8 +107,8 @@ export const Sidebar: React.FC<Props> = ({
           <button
             onClick={() => onNavigate('comments')}
             className={`w-full flex items-center p-3 rounded-lg transition-colors mb-1 ${activeModule === 'comments'
-                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
+              ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
               }`}
             title="Gestão de Comentários"
           >
@@ -106,8 +119,8 @@ export const Sidebar: React.FC<Props> = ({
           <button
             onClick={() => onNavigate('utm-gen')}
             className={`w-full flex items-center p-3 rounded-lg transition-colors ${activeModule === 'utm-gen'
-                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
+              ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
               }`}
             title="Gerador de UTM"
           >
