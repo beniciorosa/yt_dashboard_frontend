@@ -153,30 +153,45 @@ export const replyToComment = async (parentId: string, text: string): Promise<Re
 };
 
 export const deleteComment = async (commentId: string): Promise<boolean> => {
+    if (!commentId) {
+        console.error("deleteComment called without commentId");
+        return false;
+    }
     const token = await getAccessToken();
     if (!token) throw new Error("Authentication required");
 
     const endpoint = 'comments'; // DELETE /comments?id=...
     const params = { id: commentId };
 
-    const res = await fetch(PROXY_ACTION_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            token: token,
-            method: 'DELETE', // Method for Google API
-            endpoint: endpoint,
-            params: params,
-            // DELETE usually has no body, so data is undefined, proxy sends Content-Length: 0 if needed (or just no body)
-        })
-    });
+    try {
+        const res = await fetch(PROXY_ACTION_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: token,
+                method: 'DELETE', // Method for Google API
+                endpoint: endpoint,
+                params: params,
+            })
+        });
 
-    if (!res.ok) {
-        console.error("Error deleting comment:", await res.text());
-        return false;
+        if (!res.ok) {
+            console.warn("DELETE failed, trying setModerationStatus=rejected as fallback...", await res.text());
+            // Fallback: Try to reject the comment
+            return await setCommentModerationStatus(commentId, 'rejected');
+        }
+
+        return true;
+    } catch (e) {
+        console.error("Exception in deleteComment:", e);
+        // Fallback catch-all
+        try {
+            return await setCommentModerationStatus(commentId, 'rejected');
+        } catch (e2) {
+            console.error("Fallback rejection also failed:", e2);
+            return false;
+        }
     }
-
-    return true;
 };
 
 export const setCommentModerationStatus = async (commentId: string, status: 'heldForReview' | 'published' | 'rejected'): Promise<boolean> => {
