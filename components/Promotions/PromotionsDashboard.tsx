@@ -17,33 +17,19 @@ export const PromotionsDashboard: React.FC = () => {
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
     const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
 
-    // Thumbnails cache
-    const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
-
     const loadData = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
             const data = await fetchPromotions();
             setPromotions(data);
-
-            // Fetch thumbnails in background
-            data.forEach(async (p) => {
-                if (p.titulo && !thumbnails[p.titulo]) {
-                    const thumb = await getVideoThumbnail(p.titulo);
-                    if (thumb) {
-                        setThumbnails(prev => ({ ...prev, [p.titulo]: thumb }));
-                    }
-                }
-            });
-
         } catch (err: any) {
             console.error(err);
             setError("Erro ao carregar dados de promoções.");
         } finally {
             setLoading(false);
         }
-    }, [thumbnails]);
+    }, []);
 
     useEffect(() => {
         loadData();
@@ -243,7 +229,7 @@ export const PromotionsDashboard: React.FC = () => {
                             </tr>
 
                             {processedPromotions.map((promo, idx) => {
-                                const thumb = thumbnails[promo.titulo] || '';
+                                const thumb = promo.thumbnail || '';
                                 return (
                                     <tr
                                         key={idx}
@@ -314,7 +300,7 @@ export const PromotionsDashboard: React.FC = () => {
                 isOpen={!!selectedPromotion}
                 onClose={() => setSelectedPromotion(null)}
                 promotion={selectedPromotion}
-                thumbnail={selectedPromotion ? thumbnails[selectedPromotion.titulo] : ''}
+                thumbnail={selectedPromotion?.thumbnail || ''}
             />
         </div>
     );

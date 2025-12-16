@@ -124,7 +124,7 @@ export const fetchPromotions = async (): Promise<Promotion[]> => {
             cpv: cleanCurrency(p.cpv, 'cpv'),
             cps: cleanCurrency(p.cps, 'cps'),
             data_criacao: cleanDate(p.data_criacao),
-            // Ensure status logic if necessary, otherwise keep as is
+            thumbnail: p.thumbnail_url || '', // Use the column from yt_promotions directly
         }));
 
         return cleanedPromotions;
@@ -225,37 +225,91 @@ export const fetchPromotionHistory = async (title: string, days?: number): Promi
 // Helper to fetch thumbnail from YouTube API
 const CACHE_KEY_PREFIX = 'yt_thumb_';
 
+// Simple similarity function (Dice Coefficient) for client-side ranking
+const getSimilarity = (str1: string, str2: string): number => {
+    const s1 = str1.toLowerCase().replace(/[^\w\s]/g, '');
+    const s2 = str2.toLowerCase().replace(/[^\w\s]/g, '');
+
+    if (s1 === s2) return 1;
+    if (s1.length < 2 || s2.length < 2) return 0;
+
+    const bigrams = new Map<string, number>();
+    for (let i = 0; i < s1.length - 1; i++) {
+        const bigram = s1.substring(i, i + 2);
+        bigrams.set(bigram, (bigrams.get(bigram) || 0) + 1);
+    }
+
+    let intersection = 0;
+    for (let i = 0; i < s2.length - 1; i++) {
+        const bigram = s2.substring(i, i + 2);
+        if (bigrams.has(bigram) && bigrams.get(bigram)! > 0) {
+            bigrams.set(bigram, bigrams.get(bigram)! - 1);
+            intersection++;
+        }
+    }
+
+    return (2.0 * intersection) / (s1.length + s2.length - 2);
+};
+
 export const getVideoThumbnail = async (title: string): Promise<string> => {
-    // Check local storage cache first to save API calls
+    if (!title) return '';
     const cacheKey = CACHE_KEY_PREFIX + title;
     const cached = localStorage.getItem(cacheKey);
     if (cached) return cached;
 
     try {
-        // Use the existing search functionality or simple search
-        // We need to access the youtube API directly or via a backend proxy ideally.
-        // Assuming we have an endpoint or we can use the client-side key if available.
-        // Checking youtubeService for search capability.
+        // 1. First attempt: Substring match (most likely scenario based on user feedback)
+        // We fetch up to 5 candidates to select the best one
+        const { data: candidates, error } = await supabase
+            .from('yt_myvideos')
+            .select('title, thumbnail_url')
+            .ilike('title', `%${title}%`)
+            .limit(5);
 
-        // Use the Youtube Data API search endpoint
-        // This requires an API KEY. I'll rely on the one in youtubeService if exported, or env.
-
-        const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
-        if (!apiKey) {
-            console.warn("No YouTube API Key found.");
-            return '';
+        if (error && error.code !== 'PGRST116') {
+            console.error("Error fetching thumb candidates (ilike):", error);
         }
 
-        const response = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(title)}&type=video&key=${apiKey}&maxResults=1`);
-        const data = await response.json();
+        let bestMatch = '';
+        let highestScore = 0;
 
-        if (data.items && data.items.length > 0) {
-            const thumb = data.items[0].snippet.thumbnails.medium.url;
-            localStorage.setItem(cacheKey, thumb);
-            return thumb;
+        // Helper to evaluate candidates
+        const evaluate = (items: any[]) => {
+            for (const item of items) {
+                const score = getSimilarity(title, item.title);
+                // Bonus for valid thumbnail
+                if (item.thumbnail_url && score > highestScore) {
+                    highestScore = score;
+                    bestMatch = item.thumbnail_url;
+                }
+            }
+        };
+
+        if (candidates && candidates.length > 0) {
+            evaluate(candidates);
         }
+
+        // 2. Second attempt: Text Search (for cases where words are shuffled or extra chars exist)
+        // parsing the title to a websearch query pattern could be useful, or just plain text
+        if (highestScore < 0.4) { // Threshold: if no good match found yet
+            const { data: searchCandidates, error: searchError } = await supabase
+                .from('yt_myvideos')
+                .select('title, thumbnail_url')
+                .textSearch('title', title, { config: 'english', type: 'websearch' }) // 'english' or 'simple' works decent for general queries
+                .limit(5);
+
+            if (!searchError && searchCandidates) {
+                evaluate(searchCandidates);
+            }
+        }
+
+        if (bestMatch) {
+            localStorage.setItem(cacheKey, bestMatch);
+            return bestMatch;
+        }
+
     } catch (e) {
-        console.error("Error fetching thumbnail for", title, e);
+        console.error("Error in getVideoThumbnail", e);
     }
     return '';
 }
