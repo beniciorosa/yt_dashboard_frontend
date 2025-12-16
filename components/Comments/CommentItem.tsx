@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CommentThread, replyToComment, rateComment, deleteComment } from '../../services/commentsService';
 import { VideoData } from '../../services/youtubeService';
-import { MessageSquare, ThumbsUp, Trash2, CornerDownRight, Loader2, PlaySquare, Wand2, Zap, MoreHorizontal, Check, X, Plus, ChevronLeft } from 'lucide-react';
-import { generateAiReply, fetchQuickReplies, createQuickReply, deleteQuickReply, learnReply, QuickReply } from '../../services/commentsService';
+import { MessageSquare, ThumbsUp, Trash2, CornerDownRight, Loader2, PlaySquare, Wand2, Zap, MoreHorizontal, Check, X, Plus, ChevronLeft, Users } from 'lucide-react';
+import { generateAiReply, fetchQuickReplies, createQuickReply, deleteQuickReply, learnReply, QuickReply, fetchInteractionCount } from '../../services/commentsService';
 
 interface Props {
     thread: CommentThread;
@@ -30,6 +30,15 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
     const [isCreatingQuickReply, setIsCreatingQuickReply] = useState(false);
     const [newQuickReplyTitle, setNewQuickReplyTitle] = useState('');
     const [newQuickReplyText, setNewQuickReplyText] = useState('');
+
+    // Interaction Tracking
+    const [interactionCount, setInteractionCount] = useState(0);
+
+    useEffect(() => {
+        if (snippet.authorDisplayName) {
+            fetchInteractionCount(snippet.authorDisplayName).then(count => setInteractionCount(count));
+        }
+    }, [snippet.authorDisplayName]);
 
     const handleAiReply = async () => {
         setIsGeneratingAi(true);
@@ -61,9 +70,7 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
             // Wait, looking at service: `return await res.json();` from `.insert(...).select()`. 
             // Supabase `.select()` returns the array of inserted items. 
             // So I should append it or re-fetch. Re-fetching is safer or just manual append.
-            // Actually let's just re-fetch to be sure order is correct or just optimistic update.
-            // Let's assume the service returns the inserted array. 
-            // I'll just re-fetch to be simple.
+            // Actually let's just re-fetch to be simple.
             const freshList = await fetchQuickReplies();
             setQuickReplies(freshList);
             setIsCreatingQuickReply(false);
@@ -96,8 +103,11 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
         try {
             const newReply = await replyToComment(topLevelComment.id, replyText);
 
-            // Trigger Learning Mode (Fire & Forget)
-            learnReply(snippet.textOriginal, replyText);
+            // Trigger Learning Mode (Fire & Forget) with Username
+            learnReply(snippet.textOriginal, replyText, snippet.authorDisplayName);
+
+            // Optimistic update interaction count locally
+            setInteractionCount(prev => prev + 1);
 
             setReplyText('');
             setIsReplying(false);
@@ -194,11 +204,19 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
             <div className="flex-1 min-w-0">
 
                 {/* Header: Author & Time */}
-                <div className="flex items-center gap-2 mb-1.5">
+                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                     <span className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate hover:underline cursor-pointer">
                         {snippet.authorDisplayName}
                     </span>
-                    <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">
+
+                    {interactionCount > 0 && (
+                        <div className="flex items-center gap-1 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-[10px] font-medium border border-green-200 dark:border-green-800/50" title={`${interactionCount} interações anteriores`}>
+                            <Users size={10} />
+                            {interactionCount} interações
+                        </div>
+                    )}
+
+                    <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium ml-1">
                         {timeAgo(snippet.publishedAt)}
                     </span>
                 </div>

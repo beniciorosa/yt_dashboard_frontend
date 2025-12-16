@@ -312,15 +312,29 @@ export const deleteQuickReply = async (id: string): Promise<boolean> => {
     return true;
 };
 
-export const learnReply = async (commentText: string, replyText: string): Promise<void> => {
+export const learnReply = async (commentText: string, replyText: string, username?: string): Promise<void> => {
     // Fire and forget learning, but we log errors
     try {
         await fetch(`${BACKEND_API_URL}/learn`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ commentText, replyText })
+            body: JSON.stringify({ commentText, replyText, username })
         });
     } catch (e) {
         console.warn("Failed to save reply for learning:", e);
+    }
+};
+
+export const fetchInteractionCount = async (username: string): Promise<number> => {
+    if (!username) return 0;
+    try {
+        // Encode username component to handle special chars properly
+        const res = await fetch(`${BACKEND_API_URL}/interactions/${encodeURIComponent(username)}`);
+        if (!res.ok) return 0;
+        const data = await res.json();
+        return data.count || 0;
+    } catch (e) {
+        console.warn(`Failed to fetch interactions for ${username}`, e);
+        return 0;
     }
 };
