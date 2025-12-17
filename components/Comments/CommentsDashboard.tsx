@@ -28,7 +28,7 @@ export const CommentsDashboard: React.FC = () => {
                 order: filterOrder,
                 searchTerms: searchTerms || undefined,
                 pageToken: token,
-                maxResults: 50
+                maxResults: 20
             });
 
             if (data && data.items) {
