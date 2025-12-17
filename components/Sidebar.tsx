@@ -19,11 +19,11 @@ export const Sidebar: React.FC<Props> = ({
 }) => {
   return (
     <div
-      className={`bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen sticky top-0 flex flex-col transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'
+      className={`bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen sticky top-0 flex flex-col transition-all duration-300 relative ${isCollapsed ? 'w-[70px]' : 'w-64'
         }`}
     >
       {/* Header */}
-      <div className="h-16 flex items-center justify-center border-b border-gray-100 dark:border-gray-700">
+      <div className="h-16 flex items-center justify-center border-b border-gray-100 dark:border-gray-700 relative">
         <div className="bg-red-600 text-white p-2 rounded-lg">
           <BarChart3 size={24} />
         </div>
@@ -33,6 +33,15 @@ export const Sidebar: React.FC<Props> = ({
           </span>
         )}
       </div>
+
+      {/* Collapse Button - On Border */}
+      <button
+        onClick={toggleCollapse}
+        className="absolute z-50 w-8 h-8 flex items-center justify-center rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-gray-500 right-0 translate-x-1/2 top-20"
+        title={isCollapsed ? "Expandir" : "Recolher"}
+      >
+        {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+      </button>
 
       {/* Nav Items */}
       <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
@@ -69,11 +78,11 @@ export const Sidebar: React.FC<Props> = ({
           </button>
         </div>
 
-        {/* Tools Section */}
-        <div>
+        {/* Escalada Metrics Section */}
+        <div className="mb-6">
           {!isCollapsed ? (
             <p className="px-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 mt-6">
-              Ferramentas
+              Escalada Metrics
             </p>
           ) : (
             <div className="h-px bg-gray-200 dark:bg-gray-700 my-4 mx-2"></div>
@@ -91,7 +100,6 @@ export const Sidebar: React.FC<Props> = ({
             {!isCollapsed && <span className="ml-3 font-medium whitespace-nowrap">Sales Metrics</span>}
           </button>
 
-
           <button
             onClick={() => onNavigate('promotions')}
             className={`w-full flex items-center p-3 rounded-lg transition-colors mb-1 ${activeModule === 'promotions'
@@ -103,6 +111,20 @@ export const Sidebar: React.FC<Props> = ({
             <Megaphone size={20} className="shrink-0" />
             {!isCollapsed && <span className="ml-3 font-medium whitespace-nowrap">Promoções</span>}
           </button>
+        </div>
+
+        {/* Tools Section */}
+        <div>
+          {!isCollapsed ? (
+            <p className="px-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 mt-6">
+              Ferramentas
+            </p>
+          ) : (
+            <div className="h-px bg-gray-200 dark:bg-gray-700 my-4 mx-2"></div>
+          )}
+
+
+
 
           <button
             onClick={() => onNavigate('description-gen')}
@@ -159,13 +181,7 @@ export const Sidebar: React.FC<Props> = ({
           )}
         </button>
 
-        {/* Collapse Toggle */}
-        <button
-          onClick={toggleCollapse}
-          className="w-full flex items-center justify-center p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700 rounded-lg transition-colors mt-2"
-        >
-          {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-        </button>
+        {/* Collapse Toggle Removed from Footer */}
       </div>
     </div>
   );

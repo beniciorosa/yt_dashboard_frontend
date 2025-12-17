@@ -16,6 +16,7 @@ type SellerStats = {
     won: number;
     lost: number;
     revenue: number;
+    avgTime: number;
 };
 
 type SortField = 'leads' | 'won' | 'lost' | 'revenue';
@@ -30,8 +31,8 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
     // History State
-    const [isHistoryOpen, setIsHistoryOpen] = useState(true);
-    const [historyFilter, setHistoryFilter] = useState<'all' | 'won' | 'lost'>('all');
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const [historyFilter, setHistoryFilter] = useState<'all' | 'won' | 'lost'>('won');
 
     useEffect(() => {
         const load = async () => {
@@ -47,30 +48,55 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
     const wonDeals = deals.filter(d => d.etapa?.toLowerCase().includes('ganho') || d.etapa?.toLowerCase().includes('won') || d.etapa?.toLowerCase().includes('fechado'));
     const lostDeals = deals.filter(d => d.etapa?.toLowerCase().includes('perdido') || d.etapa?.toLowerCase().includes('lost'));
 
+    const conversionRate = deals.length > 0 ? (wonDeals.length / deals.length) * 100 : 0;
+
     const chartData = [
-        { name: 'Ganhos', value: wonDeals.length, color: '#10b981' },
-        { name: 'Perdidos', value: lostDeals.length, color: '#ef4444' },
+        { name: 'Ganhos', value: wonDeals.length, color: '#10b981' }, // Emerald-500
+        { name: 'Perdidos', value: lostDeals.length, color: '#ef4444' }, // Red-500
     ];
 
-    const revenueByProduct = deals.reduce((acc: any, deal) => {
+    // --- Helper for Duration ---
+    const calculateDuration = (start: string | null, end: string | null) => {
+        if (!start || !end) return null;
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+
+        const diffTime = endDate.getTime() - startDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays < 1) return 'Menos de 1 dia';
+        return `${diffDays} dia${diffDays > 1 ? 's' : ''}`;
+    };
+
+    const getDurationInDays = (start: string | null, end: string | null) => {
+        if (!start || !end) return 0;
+        const diffTime = new Date(end).getTime() - new Date(start).getTime();
+        return Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+    };
+
+    const revenueByProduct = wonDeals.reduce((acc: any, deal) => {
         if (!deal.valor) return acc;
         const prod = deal.item_linha || 'Outros';
         acc[prod] = (acc[prod] || 0) + Number(deal.valor);
         return acc;
     }, {});
 
+    const PRODUCT_COLORS = ['#6366f1', '#8b5cf6', '#d946ef', '#ec4899', '#f43f5e'];
+
     const productChartData = Object.keys(revenueByProduct).map(k => ({
-        name: k, value: revenueByProduct[k]
+        name: k.length > 25 ? k.substring(0, 25) + '...' : k,
+        fullName: k,
+        value: revenueByProduct[k]
     })).sort((a, b) => b.value - a.value).slice(0, 5);
 
     // --- Seller Ranking Logic ---
     const sellerStats = useMemo(() => {
-        const statsMap = new Map<string, SellerStats>();
+        const statsMap = new Map<string, SellerStats & { totalDays: number }>();
 
         deals.forEach(deal => {
             const name = deal.proprietario || 'Desconhecido';
             if (!statsMap.has(name)) {
-                statsMap.set(name, { name, leads: 0, won: 0, lost: 0, revenue: 0 });
+                statsMap.set(name, { name, leads: 0, won: 0, lost: 0, revenue: 0, totalDays: 0, avgTime: 0 });
             }
             const stat = statsMap.get(name)!;
             stat.leads++;
@@ -81,27 +107,37 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
             if (isWon) {
                 stat.won++;
                 stat.revenue += Number(deal.valor || 0);
+                // Calculate duration for this won deal
+                if (deal.data_criacao && deal.data_fechamento) {
+                    stat.totalDays += getDurationInDays(deal.data_criacao, deal.data_fechamento);
+                }
             } else {
                 stat.lost++;
             }
         });
 
-        return Array.from(statsMap.values()).sort((a, b) => {
+        return Array.from(statsMap.values()).map(stat => ({
+            ...stat,
+            avgTime: stat.won > 0 ? Math.round(stat.totalDays / stat.won) : 0
+        })).sort((a, b) => {
             const modifier = sortDirection === 'asc' ? 1 : -1;
-            return (a[sortField] - b[sortField]) * modifier;
+            // Handle custom sort for new column if needed
+            const valA = (a as any)[sortField];
+            const valB = (b as any)[sortField];
+            return (valA - valB) * modifier;
         });
     }, [deals, sortField, sortDirection]);
 
-    const handleSort = (field: SortField) => {
+    const handleSort = (field: SortField | 'avgTime') => {
         if (sortField === field) {
             setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
         } else {
-            setSortField(field);
+            setSortField(field as SortField);
             setSortDirection('desc');
         }
     };
 
-    const SortIcon = ({ field }: { field: SortField }) => {
+    const SortIcon = ({ field }: { field: SortField | 'avgTime' }) => {
         if (sortField !== field) return <ChevronDown size={14} className="text-gray-300 opacity-0 group-hover:opacity-50" />;
         return sortDirection === 'asc'
             ? <ChevronUp size={14} className="text-blue-500" />
@@ -144,35 +180,87 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                         <>
                             {/* Charts Row */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                                    <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-4 text-center">Taxa de Conversão</h3>
-                                    <div className="h-48">
-                                        <ResponsiveContainer width="100%" height="100%">
+                                {/* Conversion - Stylish Donut */}
+                                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col items-center justify-center relative">
+                                    <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2 absolute top-6 left-6">Taxa de Conversão</h3>
+
+                                    <div className="h-48 w-full flex items-center justify-center mt-6">
+                                        <ResponsiveContainer width={200} height={200}>
                                             <PieChart>
-                                                <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={60}>
+                                                <Pie
+                                                    data={chartData}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={60}
+                                                    outerRadius={80}
+                                                    paddingAngle={5}
+                                                    dataKey="value"
+                                                    stroke="none"
+                                                    startAngle={90}
+                                                    endAngle={-270}
+                                                >
                                                     {chartData.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                                        <Cell key={`cell-${index}`} fill={entry.color} style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.1))' }} />
                                                     ))}
                                                 </Pie>
-                                                <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                                <Tooltip
+                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', backgroundColor: 'rgba(255, 255, 255, 0.95)' }}
+                                                    itemStyle={{ color: '#374151', fontSize: '12px', fontWeight: 600 }}
+                                                />
                                             </PieChart>
                                         </ResponsiveContainer>
+
+                                        {/* Center Text */}
+                                        <div className="absolute flex flex-col items-center justify-center pointer-events-none mt-6">
+                                            <span className="text-3xl font-bold text-gray-800 dark:text-gray-100">{conversionRate.toFixed(1)}%</span>
+                                            <span className="text-xs text-gray-400 uppercase tracking-wider font-medium">Conversão</span>
+                                        </div>
                                     </div>
-                                    <div className="flex justify-center gap-6 text-sm mt-2 font-medium">
-                                        <div className="flex items-center gap-2 text-emerald-600"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> Ganhos ({wonDeals.length})</div>
-                                        <div className="flex items-center gap-2 text-red-500"><div className="w-2 h-2 rounded-full bg-red-500"></div> Perdidos ({lostDeals.length})</div>
+
+                                    <div className="flex gap-6 mt-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-emerald-100 dark:ring-emerald-900/30"></div>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-gray-400 font-medium uppercase">Ganhos</span>
+                                                <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{wonDeals.length}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 rounded-full bg-red-500 ring-2 ring-red-100 dark:ring-red-900/30"></div>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-gray-400 font-medium uppercase">Perdidos</span>
+                                                <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{lostDeals.length}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                                    <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-4 text-center">Top 5 Produtos (Receita)</h3>
-                                    <div className="h-48">
+                                {/* Revenue Product - Colored Bars */}
+                                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col relative">
+                                    <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-6">Top Produtos (Receita)</h3>
+                                    <div className="flex-1 min-h-[160px]">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={productChartData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                                            <BarChart data={productChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }} barSize={16}>
                                                 <XAxis type="number" hide />
-                                                <YAxis type="category" dataKey="name" width={80} style={{ fontSize: '10px' }} tick={{ fill: '#9ca3af' }} />
-                                                <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px', border: 'none' }} />
-                                                <Bar dataKey="value" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={20} />
+                                                <YAxis
+                                                    type="category"
+                                                    dataKey="name"
+                                                    width={140}
+                                                    tick={{ fill: '#4b5563', fontSize: 13, fontWeight: 600 }}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                />
+                                                <Tooltip
+                                                    cursor={{ fill: 'transparent' }}
+                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', backgroundColor: 'rgba(255, 255, 255, 0.95)' }}
+                                                    labelStyle={{ color: '#111827', fontWeight: 'bold', marginBottom: '4px' }}
+                                                    formatter={(value: any) => [new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value), 'Receita']}
+                                                />
+                                                <Bar dataKey="value" radius={[0, 6, 6, 0]} background={{ fill: '#f3f4f6' }}>
+                                                    {productChartData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={PRODUCT_COLORS[index % PRODUCT_COLORS.length]} />
+                                                    ))}
+                                                </Bar>
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </div>
@@ -199,6 +287,9 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                                 <th className="px-4 py-3 cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('lost')}>
                                                     <div className="flex items-center gap-1">Perdas <SortIcon field="lost" /></div>
                                                 </th>
+                                                <th className="px-4 py-3 cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('avgTime')}>
+                                                    <div className="flex items-center gap-1 whitespace-nowrap">Tempo Médio <SortIcon field="avgTime" /></div>
+                                                </th>
                                                 <th className="px-4 py-3 text-right cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('revenue')}>
                                                     <div className="flex items-center justify-end gap-1">Faturamento <SortIcon field="revenue" /></div>
                                                 </th>
@@ -212,8 +303,11 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                                         {seller.name}
                                                     </td>
                                                     <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{seller.leads}</td>
-                                                    <td className="px-4 py-3 text-emerald-600 font-medium bg-emerald-50 dark:bg-emerald-900/10 rounded-sm">{seller.won}</td>
-                                                    <td className="px-4 py-3 text-red-500 bg-red-50 dark:bg-red-900/10 rounded-sm">{seller.lost}</td>
+                                                    <td className="px-4 py-3 text-emerald-600 font-medium bg-emerald-50 dark:bg-emerald-900/10 rounded-sm w-fit px-2">{seller.won}</td>
+                                                    <td className="px-4 py-3 text-red-500 bg-red-50 dark:bg-red-900/10 rounded-sm w-fit px-2">{seller.lost}</td>
+                                                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs text-center">
+                                                        {seller.avgTime > 0 ? (seller.avgTime < 1 ? 'Menos de 1 dia' : `${seller.avgTime} dias`) : '-'}
+                                                    </td>
                                                     <td className="px-4 py-3 text-right font-bold text-gray-900 dark:text-white">
                                                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(seller.revenue)}
                                                     </td>
@@ -247,8 +341,8 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                             <button
                                                 onClick={() => setHistoryFilter('all')}
                                                 className={`px-3 py-1 text-xs font-medium rounded-full transition-colors border ${historyFilter === 'all'
-                                                        ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800'
-                                                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'
+                                                    ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800'
+                                                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'
                                                     }`}
                                             >
                                                 Todos
@@ -256,8 +350,8 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                             <button
                                                 onClick={() => setHistoryFilter('won')}
                                                 className={`px-3 py-1 text-xs font-medium rounded-full transition-colors border ${historyFilter === 'won'
-                                                        ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
-                                                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'
+                                                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
+                                                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'
                                                     }`}
                                             >
                                                 Ganhos
@@ -265,8 +359,8 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                             <button
                                                 onClick={() => setHistoryFilter('lost')}
                                                 className={`px-3 py-1 text-xs font-medium rounded-full transition-colors border ${historyFilter === 'lost'
-                                                        ? 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800'
-                                                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'
+                                                    ? 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800'
+                                                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'
                                                     }`}
                                             >
                                                 Perdidos
@@ -279,6 +373,7 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                                     <tr>
                                                         <th className="px-4 py-2">Data</th>
                                                         <th className="px-4 py-2">Etapa</th>
+                                                        <th className="px-4 py-2">Tempo</th>
                                                         <th className="px-4 py-2">Vendedor</th>
                                                         <th className="px-4 py-2">Produto</th>
                                                         <th className="px-4 py-2 text-right">Valor</th>
@@ -288,6 +383,7 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                                     {filteredHistory.map((deal, idx) => {
                                                         const isWon = deal.etapa?.toLowerCase().includes('ganho') || deal.etapa?.toLowerCase().includes('won');
                                                         const dateStr = deal.data_fechamento || deal.data_criacao || '';
+                                                        const duration = calculateDuration(deal.data_criacao, deal.data_fechamento);
 
                                                         return (
                                                             <tr key={deal.negocio_id || idx} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
@@ -302,6 +398,9 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                                                         {isWon ? <CheckCircle size={8} /> : <XCircle size={8} />}
                                                                         {deal.etapa || 'Desconhecido'}
                                                                     </span>
+                                                                </td>
+                                                                <td className="px-4 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                                                    {duration || '-'}
                                                                 </td>
                                                                 <td className="px-4 py-2 text-gray-600 dark:text-gray-300 whitespace-nowrap">
                                                                     {deal.proprietario || '-'}
