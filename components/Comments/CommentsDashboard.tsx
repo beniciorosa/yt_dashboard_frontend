@@ -22,46 +22,81 @@ export const CommentsDashboard: React.FC = () => {
         if (reset) setIsLoading(true);
         else setIsLoadingMore(true);
 
+        let currentToken = token;
+        let isResetting = reset;
+        let attempts = 0;
+        const MAX_ATTEMPTS = 5; // Fetch up to 100 comments to find unreplied ones
+        let shouldContinue = true;
+
         try {
-            const data = await fetchComments({
-                part: 'snippet,replies',
-                order: filterOrder,
-                searchTerms: searchTerms || undefined,
-                pageToken: token,
-                maxResults: 20
-            });
+            while (shouldContinue && attempts < MAX_ATTEMPTS) {
+                attempts++;
 
-            if (data && data.items) {
-                // Filter locally for "Pending" status if API doesn't support it directly in 'list'
-                // NOTE: The API doesn't have a direct "status=unreplied" filter for 'commentThreads'.
-                // We have to filter client-side or use 'moderationStatus' (if we were owner/moderator context only).
-                // Actually, strict "Pending" (Unreplied) logic:
-                // Check if 'totalReplyCount' == 0 OR if none of the replies are from the channel owner.
-                // For simplicity, we'll implement a client-side filter for now, 
-                // but this means pagination might look weird if we hide many items.
-                // Ideally we fetch a larger batch if filtering locally.
+                const data: any = await fetchComments({
+                    part: 'snippet,replies',
+                    order: filterOrder,
+                    searchTerms: searchTerms || undefined,
+                    pageToken: currentToken,
+                    maxResults: 20
+                });
 
-                let validItems = data.items;
+                if (!data || !data.items || data.items.length === 0) {
+                    shouldContinue = false;
+                    break;
+                }
+
+                const validItems = data.items;
 
                 // Fetch associated videos
-                const videoIds = Array.from(new Set(validItems.map(i => i.snippet.videoId)));
+                const videoIds = Array.from(new Set<string>(validItems.map((i: any) => i.snippet.videoId)));
                 const missingVideoIds = videoIds.filter(id => !videoCache[id]);
 
                 if (missingVideoIds.length > 0) {
-                    const videos = await fetchVideoDetailsByIds(missingVideoIds);
-                    setVideoCache(prev => {
-                        const newCache = { ...prev };
-                        videos.forEach(v => { newCache[v.id] = v; });
-                        return newCache;
-                    });
+                    try {
+                        const videos = await fetchVideoDetailsByIds(missingVideoIds);
+                        setVideoCache(prev => {
+                            const newCache = { ...prev };
+                            videos.forEach(v => { newCache[v.id] = v; });
+                            return newCache;
+                        });
+                    } catch (e) {
+                        console.warn("Error fetching video details", e);
+                    }
                 }
 
-                if (reset) {
-                    setComments(validItems);
-                } else {
-                    setComments(prev => [...prev, ...validItems]);
-                }
+                // Update Comments State
+                // We use a functional update to ensure we append to the latest state correctly even inside loop
+                // Capture the current 'isResetting' status for this specific update
+                const resetForThisUpdate = isResetting;
+                setComments(prev => {
+                    if (resetForThisUpdate) return validItems;
+
+                    // Simple distinct to avoid duplicates if any weird pagination overlap occurs
+                    const existingIds = new Set(prev.map(c => c.id));
+                    const uniqueNewItems = validItems.filter((i: any) => !existingIds.has(i.id));
+                    return [...prev, ...uniqueNewItems];
+                });
+
                 setNextPageToken(data.nextPageToken);
+                currentToken = data.nextPageToken; // Update token for next iteration
+                isResetting = false; // Subsequent iterations act as append
+
+                // DECISION: Should we fetch more?
+                if (showPendingOnly) {
+                    // Check if we found any unreplied items in this specific batch
+                    const hasUnreplied = validItems.some((i: any) => i.snippet.totalReplyCount === 0);
+
+                    if (hasUnreplied) {
+                        shouldContinue = false; // We found content! Stop auto-fetching.
+                    } else {
+                        // All items in this batch were replied to.
+                        // If we have a next page, loop again to fetch it automatically.
+                        if (!currentToken) shouldContinue = false;
+                    }
+                } else {
+                    // If filter is "All", one batch is enough.
+                    shouldContinue = false;
+                }
             }
         } catch (error) {
             console.error("Failed to load comments", error);
@@ -69,7 +104,7 @@ export const CommentsDashboard: React.FC = () => {
             setIsLoading(false);
             setIsLoadingMore(false);
         }
-    }, [filterOrder, searchTerms, videoCache]); // Added videoCache to dep array to satisfy linter if needed, but logic doesn't strictly depend on it for fetch. 
+    }, [filterOrder, searchTerms, showPendingOnly]);
 
     // Initial Load & Filter Change
     useEffect(() => {
