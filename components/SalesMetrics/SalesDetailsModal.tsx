@@ -7,12 +7,14 @@ import { importLibrary, setOptions } from '@googlemaps/js-api-loader';
 interface Props {
     videoId: string;
     videoTitle: string;
+    period: string;
     onClose: () => void;
 }
 
 type SellerStats = {
     name: string;
     leads: number;
+    activeLeads: number;
     won: number;
     lost: number;
     revenue: number;
@@ -20,7 +22,7 @@ type SellerStats = {
     conversionRate: number;
 };
 
-type SortField = 'leads' | 'won' | 'lost' | 'revenue' | 'conversionRate';
+type SortField = 'leads' | 'activeLeads' | 'won' | 'lost' | 'revenue' | 'conversionRate';
 type SortDirection = 'asc' | 'desc';
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyCe3b4O2pH9iCbLErlbglEH0lPFqxlNWic';
@@ -87,7 +89,7 @@ const formatStateName = (val: string): string => {
     return toTitleCase(val);
 };
 
-export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClose }) => {
+export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, period, onClose }) => {
     const [deals, setDeals] = useState<any[]>([]);
     const [videoData, setVideoData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -100,7 +102,7 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
     const [isRankingOpen, setIsRankingOpen] = useState(true);
     const [isOriginOpen, setIsOriginOpen] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-    const [historyFilter, setHistoryFilter] = useState<'all' | 'won' | 'lost'>('won');
+    const [historyFilter, setHistoryFilter] = useState<'all' | 'won' | 'lost' | 'active'>('won');
     const [selectedUF, setSelectedUF] = useState<string | null>(null);
 
     const mapRef = React.useRef<HTMLDivElement>(null);
@@ -109,24 +111,32 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
 
     useEffect(() => {
         const load = async () => {
-            const { video, deals: dealsData } = await fetchDealsByVideo(videoId);
+            setLoading(true);
+            const { video, deals: dealsData } = await fetchDealsByVideo(videoId, period);
             setDeals(dealsData);
             setVideoData(video);
             setLoading(false);
         };
-        load();
-    }, [videoId]);
+        if (videoId) load();
+    }, [videoId, period]);
 
     // --- Metrics for Chart ---
     // MAPPING: dealstage -> etapa, amount -> valor, products -> item_linha
     const wonDeals = deals.filter(d => d.etapa?.toLowerCase().includes('ganho') || d.etapa?.toLowerCase().includes('won') || d.etapa?.toLowerCase().includes('fechado'));
     const lostDeals = deals.filter(d => d.etapa?.toLowerCase().includes('perdido') || d.etapa?.toLowerCase().includes('lost'));
+    const activeDeals = deals.filter(d => {
+        const stage = d.etapa?.toLowerCase() || '';
+        const isWon = stage.includes('ganho') || stage.includes('won') || stage.includes('fechado');
+        const isLost = stage.includes('perdido') || stage.includes('lost');
+        return !isWon && !isLost;
+    });
 
     const conversionRate = deals.length > 0 ? (wonDeals.length / deals.length) * 100 : 0;
 
     const chartData = [
         { name: 'Ganhos', value: wonDeals.length, color: '#10b981' }, // Emerald-500
         { name: 'Perdidos', value: lostDeals.length, color: '#ef4444' }, // Red-500
+        { name: 'Ativos', value: activeDeals.length, color: '#6366f1' }, // Indigo-500
     ];
 
     // --- Helper for Duration ---
@@ -185,13 +195,14 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
         deals.forEach(deal => {
             const name = deal.proprietario || 'Desconhecido';
             if (!statsMap.has(name)) {
-                statsMap.set(name, { name, leads: 0, won: 0, lost: 0, revenue: 0, totalDays: 0, avgTime: 0, conversionRate: 0 });
+                statsMap.set(name, { name, leads: 0, activeLeads: 0, won: 0, lost: 0, revenue: 0, totalDays: 0, avgTime: 0, conversionRate: 0 });
             }
             const stat = statsMap.get(name)!;
             stat.leads++;
 
             const etapa = deal.etapa?.toLowerCase() || '';
             const isWon = etapa.includes('ganho') || etapa.includes('won') || etapa.includes('fechado');
+            const isLost = etapa.includes('perdido') || etapa.includes('lost');
 
             if (isWon) {
                 stat.won++;
@@ -200,8 +211,10 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                 if (deal.data_criacao && deal.data_fechamento) {
                     stat.totalDays += getDurationInDays(deal.data_criacao, deal.data_fechamento);
                 }
-            } else {
+            } else if (isLost) {
                 stat.lost++;
+            } else {
+                stat.activeLeads++;
             }
         });
 
@@ -392,7 +405,13 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
         return deals.filter(d => {
             const etapa = d.etapa?.toLowerCase() || '';
             const isWon = etapa.includes('ganho') || etapa.includes('won') || etapa.includes('fechado');
-            return historyFilter === 'won' ? isWon : !isWon;
+            const isLost = etapa.includes('perdido') || etapa.includes('lost');
+            const isActive = !isWon && !isLost;
+
+            if (historyFilter === 'won') return isWon;
+            if (historyFilter === 'lost') return isLost;
+            if (historyFilter === 'active') return isActive;
+            return true;
         });
     }, [deals, historyFilter]);
 
@@ -525,6 +544,13 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 rounded-full bg-[#6366f1] ring-2 ring-indigo-100 dark:ring-indigo-900/30"></div>
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] text-gray-400 font-medium">Ativos</span>
+                                                <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{activeDeals.length}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
                                             <div className="w-3 h-3 rounded-full bg-red-500 ring-2 ring-red-100 dark:ring-red-900/30"></div>
                                             <div className="flex flex-col">
                                                 <span className="text-[10px] text-gray-400 font-medium">Perdidos</span>
@@ -609,6 +635,9 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                                 <th className="px-4 py-3 text-center cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('leads')}>
                                                     <div className="flex items-center justify-center gap-1">Leads <SortIcon field="leads" /></div>
                                                 </th>
+                                                <th className="px-4 py-3 text-center cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('activeLeads')}>
+                                                    <div className="flex items-center justify-center gap-1 whitespace-nowrap">LD Ativos <SortIcon field="activeLeads" /></div>
+                                                </th>
                                                 <th className="px-4 py-3 text-center cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('won')}>
                                                     <div className="flex items-center justify-center gap-1">Vendas <SortIcon field="won" /></div>
                                                 </th>
@@ -622,7 +651,7 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                                     <div className="flex items-center justify-center gap-1 whitespace-nowrap">Tempo Médio <SortIcon field="avgTime" /></div>
                                                 </th>
                                                 <th className="px-4 py-3 text-right cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('revenue')}>
-                                                    <div className="flex items-center justify-end gap-1">Faturamento <SortIcon field="revenue" /></div>
+                                                    <div className="flex items-center justify-end gap-1">Receita <SortIcon field="revenue" /></div>
                                                 </th>
                                             </tr>
                                         </thead>
@@ -634,6 +663,11 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                                         {seller.name}
                                                     </td>
                                                     <td className="px-4 py-2 text-xs text-gray-600 dark:text-gray-300 text-center">{seller.leads}</td>
+                                                    <td className="px-4 py-2 text-xs text-center">
+                                                        <span className="text-blue-600 font-medium bg-blue-50 dark:bg-blue-900/10 rounded-sm px-2 py-0.5">
+                                                            {seller.activeLeads}
+                                                        </span>
+                                                    </td>
                                                     <td className="px-4 py-2 text-xs text-center">
                                                         <span className="text-emerald-600 font-medium bg-emerald-50 dark:bg-emerald-900/10 rounded-sm px-2 py-0.5">
                                                             {seller.won}
@@ -796,6 +830,15 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                             >
                                                 Perdidos
                                             </button>
+                                            <button
+                                                onClick={() => setHistoryFilter('active')}
+                                                className={`px-3 py-1 text-xs font-medium rounded-full transition-colors border ${historyFilter === 'active'
+                                                    ? 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
+                                                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'
+                                                    }`}
+                                            >
+                                                Em Atendimento
+                                            </button>
                                         </div>
 
                                         <div className="overflow-x-auto">
@@ -824,7 +867,9 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                                                 <td className="px-4 py-2">
                                                                     <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${isWon
                                                                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                                                        : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                                                                        : deal.etapa?.toLowerCase().includes('perdido') || deal.etapa?.toLowerCase().includes('lost')
+                                                                            ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                                                                         }`}>
                                                                         {isWon ? <CheckCircle size={8} /> : <XCircle size={8} />}
                                                                         {deal.etapa || 'Desconhecido'}

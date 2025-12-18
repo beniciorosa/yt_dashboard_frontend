@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { fetchSalesDashboardData, SalesRankingItem, SalesSummary } from '../../services/salesMetricsService';
 import { SalesDetailsModal } from './SalesDetailsModal';
-import { DollarSign, BarChart2, TrendingUp, ShoppingBag, ArrowUpRight, Search } from 'lucide-react';
+import { DollarSign, BarChart2, TrendingUp, ShoppingBag, ArrowUpRight, Search, Calendar } from 'lucide-react';
 
 export const SalesMetricsDashboard: React.FC = () => {
     const [summary, setSummary] = useState<SalesSummary | null>(null);
@@ -10,17 +10,18 @@ export const SalesMetricsDashboard: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [selectedVideo, setSelectedVideo] = useState<SalesRankingItem | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [period, setPeriod] = useState('month');
 
     useEffect(() => {
         const load = async () => {
             setLoading(true);
-            const data = await fetchSalesDashboardData();
+            const data = await fetchSalesDashboardData(period);
             setSummary(data?.summary || { totalRevenue: 0, totalDeals: 0, totalWon: 0, conversionRate: 0 });
             setRanking(data?.ranking || []);
             setLoading(false);
         };
         load();
-    }, []);
+    }, [period]);
 
     const filteredRanking = ranking.filter(item =>
         item.videoTitle.toLowerCase().includes(searchTerm.toLowerCase())
@@ -47,14 +48,35 @@ export const SalesMetricsDashboard: React.FC = () => {
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* Header */}
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                    <DollarSign className="w-8 h-8 text-emerald-500" />
-                    Sales Metrics
-                </h1>
-                <p className="text-gray-500 dark:text-gray-400 mt-1">
-                    Análise de performance comercial dos seus vídeos do YouTube.
-                </p>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                        <DollarSign className="w-8 h-8 text-emerald-500" />
+                        Sales Metrics
+                    </h1>
+                    <p className="text-gray-500 dark:text-gray-400 mt-1">
+                        Análise de performance comercial dos seus vídeos do YouTube.
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-1.5 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                    <div className="p-2 text-gray-400">
+                        <Calendar size={18} />
+                    </div>
+                    <select
+                        value={period}
+                        onChange={(e) => setPeriod(e.target.value)}
+                        className="bg-transparent text-sm font-medium text-gray-700 dark:text-gray-200 focus:outline-none pr-8 cursor-pointer"
+                    >
+                        <option value="today">Hoje</option>
+                        <option value="week">Semana atual</option>
+                        <option value="month">Mês atual</option>
+                        <option value="30days">Últimos 30 dias</option>
+                        <option value="60days">Últimos 60 dias</option>
+                        <option value="year">Este ano</option>
+                        <option value="all">Todo o período</option>
+                    </select>
+                </div>
             </div>
 
             {/* Stats Overview */}
@@ -199,6 +221,7 @@ export const SalesMetricsDashboard: React.FC = () => {
                 <SalesDetailsModal
                     videoId={selectedVideo.videoId}
                     videoTitle={selectedVideo.videoTitle}
+                    period={period}
                     onClose={() => setSelectedVideo(null)}
                 />
             )}

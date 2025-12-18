@@ -44,9 +44,9 @@ export const fetchSalesRanking = async (): Promise<SalesRankingItem[]> => {
     }
 };
 
-export const fetchSalesDashboardData = async (): Promise<{ summary: SalesSummary, ranking: SalesRankingItem[] }> => {
+export const fetchSalesDashboardData = async (period: string = 'month'): Promise<{ summary: SalesSummary, ranking: SalesRankingItem[] }> => {
     try {
-        const res = await fetch(`${API_BASE_URL}/api/sales/dashboard`);
+        const res = await fetch(`${API_BASE_URL}/api/sales/dashboard?period=${period}`);
         if (!res.ok) throw new Error('Failed to fetch dashboard data');
         return await res.json();
     } catch (error) {
@@ -58,9 +58,9 @@ export const fetchSalesDashboardData = async (): Promise<{ summary: SalesSummary
     }
 };
 
-export const fetchDealsByVideo = async (videoId: string): Promise<{ video: any, deals: any[] }> => {
+export const fetchDealsByVideo = async (videoId: string, period: string = 'month'): Promise<{ video: any, deals: any[] }> => {
     try {
-        const res = await fetch(`${API_BASE_URL}/api/sales/${videoId}`);
+        const res = await fetch(`${API_BASE_URL}/api/sales/${videoId}?period=${period}`);
         if (!res.ok) throw new Error('Failed to fetch deals');
         return await res.json();
     } catch (error) {
