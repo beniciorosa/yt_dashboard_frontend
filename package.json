@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "go": "git status && git add . && git commit -m \"auto\" && git push origin main"
+    "go": "git add . && git commit -m \"auto front\" && git push origin main && cd ../yt_dashboard_backend && git add . && git commit -m \"auto back\" && git push origin main"
   },
   "dependencies": {
     "@google/genai": "^1.31.0",
