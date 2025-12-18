@@ -1,8 +1,8 @@
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { X, Calendar, User, ShoppingBag, DollarSign, CheckCircle, XCircle, ChevronDown, ChevronUp, ChevronRight, Award, Trophy, Filter } from 'lucide-react';
 import { fetchDealsByVideo } from '../../services/salesMetricsService';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
+import { importLibrary, setOptions } from '@googlemaps/js-api-loader';
 
 interface Props {
     videoId: string;
@@ -17,27 +17,75 @@ type SellerStats = {
     lost: number;
     revenue: number;
     avgTime: number;
+    conversionRate: number;
 };
 
-type SortField = 'leads' | 'won' | 'lost' | 'revenue';
+type SortField = 'leads' | 'won' | 'lost' | 'revenue' | 'conversionRate';
 type SortDirection = 'asc' | 'desc';
+
+const GOOGLE_MAPS_API_KEY = 'AIzaSyCe3b4O2pH9iCbLErlbglEH0lPFqxlNWic';
+
+setOptions({
+    key: GOOGLE_MAPS_API_KEY
+});
+
+const UF_COORDS: Record<string, { lat: number, lng: number }> = {
+    'AC': { lat: -9.02, lng: -70.81 }, 'AL': { lat: -9.57, lng: -36.78 }, 'AP': { lat: 1.41, lng: -51.77 },
+    'AM': { lat: -3.47, lng: -62.21 }, 'BA': { lat: -12.96, lng: -41.68 }, 'CE': { lat: -5.20, lng: -39.53 },
+    'DF': { lat: -15.78, lng: -47.86 }, 'ES': { lat: -19.19, lng: -40.34 }, 'GO': { lat: -15.83, lng: -49.06 },
+    'MA': { lat: -4.96, lng: -45.27 }, 'MT': { lat: -12.64, lng: -55.42 }, 'MS': { lat: -20.51, lng: -54.54 },
+    'MG': { lat: -18.51, lng: -44.51 }, 'PA': { lat: -3.79, lng: -52.48 }, 'PB': { lat: -7.28, lng: -36.72 },
+    'PR': { lat: -24.89, lng: -51.55 }, 'PE': { lat: -8.28, lng: -37.94 }, 'PI': { lat: -7.71, lng: -42.71 },
+    'RJ': { lat: -22.84, lng: -43.15 }, 'RN': { lat: -5.79, lng: -36.51 }, 'RS': { lat: -30.01, lng: -53.45 },
+    'RO': { lat: -11.50, lng: -63.14 }, 'RR': { lat: 2.73, lng: -61.30 }, 'SC': { lat: -27.24, lng: -50.21 },
+    'SP': { lat: -23.55, lng: -46.63 }, 'SE': { lat: -10.90, lng: -37.07 }, 'TO': { lat: -10.17, lng: -48.33 },
+};
+
+const normalizeUF = (val: string): string => {
+    if (!val) return '';
+    const match = val.match(/\(([A-Z]{2})\)/);
+    if (match) return match[1];
+
+    const cleaned = val.trim().toUpperCase();
+    if (cleaned.length === 2) return cleaned;
+
+    // Fallback/Mapping
+    const map: Record<string, string> = {
+        'SAO PAULO': 'SP', 'MINAS GERAIS': 'MG', 'RIO DE JANEIRO': 'RJ', 'BAHIA': 'BA',
+        'PARANA': 'PR', 'RIO GRANDE DO SUL': 'RS', 'PERNAMBUCO': 'PE', 'CEARA': 'CE',
+        'PARA': 'PA', 'SANTA CATARINA': 'SC', 'MARANHAO': 'MA', 'GOIAS': 'GO',
+        'AMAZONAS': 'AM', 'ESPIRITO SANTO': 'ES', 'PARAIBA': 'PB', 'RIO GRANDE DO NORTE': 'RN',
+        'MATO GROSSO': 'MT', 'ALAGOAS': 'AL', 'PIAUI': 'PI', 'DISTRITO FEDERAL': 'DF',
+        'MATO GROSSO DO SUL': 'MS', 'SERGIPE': 'SE', 'RONDONIA': 'RO', 'TOCANTINS': 'TO',
+        'ACRE': 'AC', 'AMAPA': 'AP', 'RORAIMA': 'RR'
+    };
+    return map[cleaned] || cleaned;
+};
 
 export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClose }) => {
     const [deals, setDeals] = useState<any[]>([]);
+    const [videoData, setVideoData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     // Seller Ranking State
     const [sortField, setSortField] = useState<SortField>('revenue');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
-    // History State
+    // Section Visibility State
+    const [isOriginOpen, setIsOriginOpen] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [historyFilter, setHistoryFilter] = useState<'all' | 'won' | 'lost'>('won');
+    const [selectedUF, setSelectedUF] = useState<string | null>(null);
+
+    const mapRef = React.useRef<HTMLDivElement>(null);
+    const [googleMap, setGoogleMap] = useState<any>(null);
+    const markersRef = React.useRef<any[]>([]);
 
     useEffect(() => {
         const load = async () => {
-            const data = await fetchDealsByVideo(videoId);
-            setDeals(data);
+            const { video, deals: dealsData } = await fetchDealsByVideo(videoId);
+            setDeals(dealsData);
+            setVideoData(video);
             setLoading(false);
         };
         load();
@@ -96,7 +144,7 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
         deals.forEach(deal => {
             const name = deal.proprietario || 'Desconhecido';
             if (!statsMap.has(name)) {
-                statsMap.set(name, { name, leads: 0, won: 0, lost: 0, revenue: 0, totalDays: 0, avgTime: 0 });
+                statsMap.set(name, { name, leads: 0, won: 0, lost: 0, revenue: 0, totalDays: 0, avgTime: 0, conversionRate: 0 });
             }
             const stat = statsMap.get(name)!;
             stat.leads++;
@@ -118,7 +166,8 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
 
         return Array.from(statsMap.values()).map(stat => ({
             ...stat,
-            avgTime: stat.won > 0 ? Math.round(stat.totalDays / stat.won) : 0
+            avgTime: stat.won > 0 ? Math.round(stat.totalDays / stat.won) : 0,
+            conversionRate: stat.leads > 0 ? (stat.won / stat.leads) * 100 : 0
         })).sort((a, b) => {
             const modifier = sortDirection === 'asc' ? 1 : -1;
             // Handle custom sort for new column if needed
@@ -127,6 +176,137 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
             return (valA - valB) * modifier;
         });
     }, [deals, sortField, sortDirection]);
+
+    // --- Origin Metrics ---
+    const originStats = useMemo(() => {
+        const statsMap = new Map<string, { uf: string, count: number, revenue: number }>();
+
+        deals.forEach(deal => {
+            const etapa = deal.etapa?.toLowerCase() || '';
+            const isWon = etapa.includes('ganho') || etapa.includes('won') || etapa.includes('fechado');
+            if (!isWon) return;
+
+            const uf = deal.uf_padrao || 'OUTROS';
+            if (!statsMap.has(uf)) {
+                statsMap.set(uf, { uf, count: 0, revenue: 0 });
+            }
+            const stat = statsMap.get(uf)!;
+            stat.count++;
+            stat.revenue += Number(deal.valor || 0);
+        });
+
+        return Array.from(statsMap.values())
+            .sort((a, b) => b.revenue - a.revenue)
+            .slice(0, 10);
+    }, [deals]);
+
+    const salesWithUF = useMemo(() => {
+        return deals.filter(d => {
+            const etapa = d.etapa?.toLowerCase() || '';
+            const isWon = etapa.includes('ganho') || etapa.includes('won') || etapa.includes('fechado');
+            return isWon && d.uf_padrao;
+        });
+    }, [deals]);
+
+    // --- Google Maps Logic ---
+    // Initialize Map
+    useEffect(() => {
+        if (!isOriginOpen || !mapRef.current || googleMap) return;
+
+        const initMap = async () => {
+            try {
+                const { Map } = await importLibrary('maps');
+                const map = new Map(mapRef.current!, {
+                    center: { lat: -14.235, lng: -51.9253 }, // Center of Brazil
+                    zoom: 4,
+                    styles: [
+                        {
+                            "featureType": "all",
+                            "elementType": "labels.text.fill",
+                            "stylers": [{ "color": "#7c93a3" }, { "lightness": "-10" }]
+                        }
+                    ],
+                    disableDefaultUI: true,
+                    zoomControl: true,
+                });
+                setGoogleMap(map);
+            } catch (err) {
+                console.error("Error initializing Google Maps:", err);
+            }
+        };
+
+        initMap();
+    }, [isOriginOpen]);
+
+    // Update Markers
+    useEffect(() => {
+        if (!googleMap || !isOriginOpen) return;
+
+        // Clear existing markers
+        markersRef.current.forEach(m => m.setMap(null));
+        markersRef.current = [];
+
+        const updateMarkers = async () => {
+            try {
+                await importLibrary('marker'); // Ensure library is loaded
+                const g = (window as any).google;
+                if (!g || !g.maps || !g.maps.Marker) return;
+
+                salesWithUF.forEach((sale) => {
+                    const ufCode = normalizeUF(sale.uf_padrao);
+                    const coords = UF_COORDS[ufCode];
+                    if (!coords) return;
+
+                    const jitterLat = (Math.random() - 0.5) * 0.4;
+                    const jitterLng = (Math.random() - 0.5) * 0.4;
+
+                    const marker = new g.maps.Marker({
+                        position: { lat: coords.lat + jitterLat, lng: coords.lng + jitterLng },
+                        map: googleMap,
+                        title: `${sale.proprietario || 'Venda'} - ${sale.uf_padrao}`,
+                        icon: {
+                            path: 'M 0,0 m -5,0 a 5,5 0 1,0 10,0 a 5,5 0 1,0 -10,0',
+                            fillColor: '#ef4444',
+                            fillOpacity: 1,
+                            strokeWeight: 1,
+                            strokeColor: '#ffffff',
+                            scale: 1.5
+                        }
+                    });
+                    markersRef.current.push(marker);
+                });
+            } catch (err) {
+                console.error("Error updating markers:", err);
+            }
+        };
+
+        updateMarkers();
+
+        return () => {
+            markersRef.current.forEach(m => m.setMap(null));
+            markersRef.current = [];
+        };
+    }, [isOriginOpen, salesWithUF, googleMap]);
+
+    const handleUFClick = (uf: string) => {
+        setSelectedUF(uf);
+        const ufCode = normalizeUF(uf);
+        const coords = UF_COORDS[ufCode];
+        if (coords && googleMap) {
+            googleMap.setCenter(coords);
+            googleMap.setZoom(6);
+        }
+    };
+
+    // --- Header Metrics ---
+    const totalWonRevenue = useMemo(() => wonDeals.reduce((sum, d) => sum + Number(d.valor || 0), 0), [wonDeals]);
+    const averageTicket = useMemo(() => wonDeals.length > 0 ? totalWonRevenue / wonDeals.length : 0, [totalWonRevenue, wonDeals]);
+    const averageTimeForAllSellers = useMemo(() => {
+        const sellersWithAvgTime = sellerStats.filter(s => s.avgTime > 0);
+        if (sellersWithAvgTime.length === 0) return 0;
+        const sum = sellersWithAvgTime.reduce((acc, s) => acc + s.avgTime, 0);
+        return Math.round(sum / sellersWithAvgTime.length);
+    }, [sellerStats]);
 
     const handleSort = (field: SortField | 'avgTime') => {
         if (sortField === field) {
@@ -159,11 +339,30 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col border border-gray-200 dark:border-gray-700">
                 {/* Header */}
                 <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50">
-                    <div>
-                        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                            <DollarSign className="text-emerald-500" /> Detalhes de Vendas
-                        </h2>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">{videoTitle}</p>
+                    <div className="flex items-center gap-4">
+                        {videoData?.thumbnail_url && (
+                            <img
+                                src={videoData.thumbnail_url}
+                                alt={videoData.title}
+                                className="w-20 h-12 object-cover rounded-md shadow-sm border border-gray-200 dark:border-gray-700"
+                            />
+                        )}
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                                <DollarSign className="text-emerald-500" /> Detalhes de Vendas
+                            </h2>
+                            <div className="flex flex-col mt-1">
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 line-clamp-1">{videoData?.title || videoTitle}</p>
+                                <a
+                                    href={`https://youtube.com/watch?v=${videoId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1 w-fit transition-colors"
+                                >
+                                    Ver no YouTube <ChevronRight size={12} />
+                                </a>
+                            </div>
+                        </div>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors text-gray-500">
                         <X size={20} />
@@ -178,6 +377,44 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                         <div className="text-center py-20 text-gray-500">Nenhum negócio encontrado para este vídeo.</div>
                     ) : (
                         <>
+                            {/* Summary Cards */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                                    <div className="flex items-center gap-3 text-emerald-500 mb-2">
+                                        <div className="p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+                                            <DollarSign size={20} />
+                                        </div>
+                                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Receita Total</span>
+                                    </div>
+                                    <div className="text-2xl font-black text-gray-900 dark:text-white">
+                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalWonRevenue)}
+                                    </div>
+                                </div>
+
+                                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                                    <div className="flex items-center gap-3 text-blue-500 mb-2">
+                                        <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                            <Calendar size={20} />
+                                        </div>
+                                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Tempo Médio Venda</span>
+                                    </div>
+                                    <div className="text-2xl font-black text-gray-900 dark:text-white">
+                                        {averageTimeForAllSellers > 0 ? `${averageTimeForAllSellers} dias` : '-'}
+                                    </div>
+                                </div>
+
+                                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                                    <div className="flex items-center gap-3 text-amber-500 mb-2">
+                                        <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                                            <ShoppingBag size={20} />
+                                        </div>
+                                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Ticket Médio</span>
+                                    </div>
+                                    <div className="text-2xl font-black text-gray-900 dark:text-white">
+                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(averageTicket)}
+                                    </div>
+                                </div>
+                            </div>
                             {/* Charts Row */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {/* Conversion - Stylish Donut */}
@@ -277,18 +514,21 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                     <table className="w-full text-sm text-left">
                                         <thead className="bg-gray-50 dark:bg-gray-700/50 text-xs text-gray-500 uppercase tracking-wider font-semibold">
                                             <tr>
-                                                <th className="px-4 py-3">Vendedor</th>
-                                                <th className="px-4 py-3 cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('leads')}>
-                                                    <div className="flex items-center gap-1">Leads <SortIcon field="leads" /></div>
+                                                <th className="px-4 py-3 text-left">Vendedor</th>
+                                                <th className="px-4 py-3 text-center cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('leads')}>
+                                                    <div className="flex items-center justify-center gap-1">Leads <SortIcon field="leads" /></div>
                                                 </th>
-                                                <th className="px-4 py-3 cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('won')}>
-                                                    <div className="flex items-center gap-1">Vendas <SortIcon field="won" /></div>
+                                                <th className="px-4 py-3 text-center cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('won')}>
+                                                    <div className="flex items-center justify-center gap-1">Vendas <SortIcon field="won" /></div>
                                                 </th>
-                                                <th className="px-4 py-3 cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('lost')}>
-                                                    <div className="flex items-center gap-1">Perdas <SortIcon field="lost" /></div>
+                                                <th className="px-4 py-3 text-center cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('lost')}>
+                                                    <div className="flex items-center justify-center gap-1">Perdas <SortIcon field="lost" /></div>
                                                 </th>
-                                                <th className="px-4 py-3 cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('avgTime')}>
-                                                    <div className="flex items-center gap-1 whitespace-nowrap">Tempo Médio <SortIcon field="avgTime" /></div>
+                                                <th className="px-4 py-3 text-center cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('conversionRate')}>
+                                                    <div className="flex items-center justify-center gap-1 whitespace-nowrap">Tx. Conversão <SortIcon field="conversionRate" /></div>
+                                                </th>
+                                                <th className="px-4 py-3 text-center cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('avgTime')}>
+                                                    <div className="flex items-center justify-center gap-1 whitespace-nowrap">Tempo Médio <SortIcon field="avgTime" /></div>
                                                 </th>
                                                 <th className="px-4 py-3 text-right cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('revenue')}>
                                                     <div className="flex items-center justify-end gap-1">Faturamento <SortIcon field="revenue" /></div>
@@ -298,17 +538,28 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                             {sellerStats.map((seller, idx) => (
                                                 <tr key={seller.name} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                                                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                                                        {idx === 0 && <Award size={16} className="text-amber-500" />}
+                                                    <td className="px-4 py-2 text-xs font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                                                        {idx === 0 && <Award size={14} className="text-amber-500" />}
                                                         {seller.name}
                                                     </td>
-                                                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{seller.leads}</td>
-                                                    <td className="px-4 py-3 text-emerald-600 font-medium bg-emerald-50 dark:bg-emerald-900/10 rounded-sm w-fit px-2">{seller.won}</td>
-                                                    <td className="px-4 py-3 text-red-500 bg-red-50 dark:bg-red-900/10 rounded-sm w-fit px-2">{seller.lost}</td>
-                                                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs text-center">
+                                                    <td className="px-4 py-2 text-xs text-gray-600 dark:text-gray-300 text-center">{seller.leads}</td>
+                                                    <td className="px-4 py-2 text-xs text-center">
+                                                        <span className="text-emerald-600 font-medium bg-emerald-50 dark:bg-emerald-900/10 rounded-sm px-2 py-0.5">
+                                                            {seller.won}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-2 text-xs text-center">
+                                                        <span className="text-red-500 bg-red-50 dark:bg-red-900/10 rounded-sm px-2 py-0.5">
+                                                            {seller.lost}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400">
+                                                        {seller.conversionRate.toFixed(1)}%
+                                                    </td>
+                                                    <td className="px-4 py-2 text-center text-gray-500 dark:text-gray-400 text-xs">
                                                         {seller.avgTime > 0 ? (seller.avgTime < 1 ? 'Menos de 1 dia' : `${seller.avgTime} dias`) : '-'}
                                                     </td>
-                                                    <td className="px-4 py-3 text-right font-bold text-gray-900 dark:text-white">
+                                                    <td className="px-4 py-2 text-right font-bold text-gray-900 dark:text-white text-xs">
                                                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(seller.revenue)}
                                                     </td>
                                                 </tr>
@@ -316,6 +567,81 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                         </tbody>
                                     </table>
                                 </div>
+                            </div>
+
+                            {/* Origem da Venda */}
+                            <div className="border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
+                                <div
+                                    className="p-4 bg-gray-50/80 dark:bg-gray-800 flex items-center justify-between cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
+                                    onClick={() => setIsOriginOpen(!isOriginOpen)}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <Filter className="w-5 h-5 text-purple-500" />
+                                        <h3 className="font-bold text-gray-800 dark:text-gray-100">Origem da Venda</h3>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        {isOriginOpen ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
+                                    </div>
+                                </div>
+
+                                {isOriginOpen && (
+                                    <div className="p-6 flex flex-col md:flex-row gap-8 min-h-[400px]">
+                                        {/* Ranking de Regiões */}
+                                        <div className="flex-1 space-y-4">
+                                            <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Top 10 Regiões</h4>
+                                            <div className="overflow-hidden rounded-lg border border-gray-100 dark:border-gray-700">
+                                                <table className="w-full text-xs text-left">
+                                                    <thead className="bg-gray-50 dark:bg-gray-800 text-gray-500 font-semibold">
+                                                        <tr>
+                                                            <th className="px-4 py-2">Estado</th>
+                                                            <th className="px-4 py-2 text-center">Vendas</th>
+                                                            <th className="px-4 py-2 text-right">Faturamento</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                                        {originStats.map((stat) => (
+                                                            <tr
+                                                                key={stat.uf}
+                                                                className={`hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition-colors ${selectedUF === stat.uf ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}
+                                                                onClick={() => handleUFClick(stat.uf)}
+                                                            >
+                                                                <td className="px-4 py-3 font-bold text-gray-900 dark:text-white uppercase">{stat.uf}</td>
+                                                                <td className="px-4 py-3 text-center font-medium text-gray-600 dark:text-gray-400">{stat.count}</td>
+                                                                <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200">
+                                                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stat.revenue)}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                        {originStats.length === 0 && (
+                                                            <tr>
+                                                                <td colSpan={3} className="px-4 py-8 text-center text-gray-400 italic">Nenhum dado de região disponível</td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+
+                                        {/* Mapa do Brasil */}
+                                        <div className="flex-1 bg-gray-50 dark:bg-gray-900/50 rounded-xl relative overflow-hidden border border-gray-100 dark:border-gray-700 group">
+                                            <div className="absolute top-4 right-4 z-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur rounded-lg p-2 shadow-sm border border-gray-200 dark:border-gray-700 text-[10px] space-y-1">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                                                    <span className="font-bold dark:text-gray-300">Total: {salesWithUF.length} vendas</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Google Maps Container */}
+                                            <div ref={mapRef} className="w-full h-full min-h-[350px] relative">
+                                                {/* Map renderizado aqui */}
+                                            </div>
+
+                                            <div className="absolute bottom-4 left-4 text-[10px] text-gray-400 font-medium bg-white/50 dark:bg-gray-800/50 px-2 py-1 rounded backdrop-blur-sm pointer-events-none">
+                                                Use o zoom para detalhar • Clique nos estados no ranking
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* History */}

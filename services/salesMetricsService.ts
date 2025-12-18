@@ -43,13 +43,27 @@ export const fetchSalesRanking = async (): Promise<SalesRankingItem[]> => {
     }
 };
 
-export const fetchDealsByVideo = async (videoId: string): Promise<any[]> => {
+export const fetchSalesDashboardData = async (): Promise<{ summary: SalesSummary, ranking: SalesRankingItem[] }> => {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/sales/dashboard`);
+        if (!res.ok) throw new Error('Failed to fetch dashboard data');
+        return await res.json();
+    } catch (error) {
+        console.error(error);
+        return {
+            summary: { totalRevenue: 0, totalDeals: 0, totalWon: 0, conversionRate: 0 },
+            ranking: []
+        };
+    }
+};
+
+export const fetchDealsByVideo = async (videoId: string): Promise<{ video: any, deals: any[] }> => {
     try {
         const res = await fetch(`${API_BASE_URL}/api/sales/${videoId}`);
         if (!res.ok) throw new Error('Failed to fetch deals');
         return await res.json();
     } catch (error) {
         console.error(error);
-        return [];
+        return { video: null, deals: [] };
     }
 };

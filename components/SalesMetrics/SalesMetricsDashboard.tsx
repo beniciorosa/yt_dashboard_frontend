@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { fetchSalesRanking, fetchSalesSummary, SalesRankingItem, SalesSummary } from '../../services/salesMetricsService';
+import { fetchSalesDashboardData, SalesRankingItem, SalesSummary } from '../../services/salesMetricsService';
 import { SalesDetailsModal } from './SalesDetailsModal';
 import { DollarSign, BarChart2, TrendingUp, ShoppingBag, ArrowUpRight, Search } from 'lucide-react';
 
@@ -14,12 +14,9 @@ export const SalesMetricsDashboard: React.FC = () => {
     useEffect(() => {
         const load = async () => {
             setLoading(true);
-            const [sumData, rankData] = await Promise.all([
-                fetchSalesSummary(),
-                fetchSalesRanking()
-            ]);
-            setSummary(sumData);
-            setRanking(rankData);
+            const data = await fetchSalesDashboardData();
+            setSummary(data?.summary || { totalRevenue: 0, totalDeals: 0, totalWon: 0, conversionRate: 0 });
+            setRanking(data?.ranking || []);
             setLoading(false);
         };
         load();

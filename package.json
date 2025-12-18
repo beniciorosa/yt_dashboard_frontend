@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.31.0",
+    "@googlemaps/js-api-loader": "^2.0.2",
     "@supabase/supabase-js": "^2.45.0",
     "chart.js": "^4.5.1",
     "cors": "^2.8.5",
@@ -25,6 +26,7 @@
     "url": "^0.11.4"
   },
   "devDependencies": {
+    "@types/google.maps": "^3.58.1",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.8.2",
