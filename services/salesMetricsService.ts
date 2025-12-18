@@ -9,6 +9,7 @@ export interface SalesRankingItem {
     totalRevenue: number;
     dealsCount: number;
     wonCount: number;
+    wonToday: number;
     lostCount: number;
     conversionRate: number;
     products: string[];

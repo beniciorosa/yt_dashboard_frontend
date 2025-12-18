@@ -163,7 +163,14 @@ export const SalesMetricsDashboard: React.FC = () => {
                                             <div className="text-[10px] text-gray-400">leads</div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400">{item.wonCount}</div>
+                                            <div className="flex items-center justify-center gap-1.5">
+                                                <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400">{item.wonCount}</div>
+                                                {item.wonToday > 0 && (
+                                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800 animate-pulse" title="Vendas realizadas hoje">
+                                                        +{item.wonToday} HOJE
+                                                    </span>
+                                                )}
+                                            </div>
                                             <div className="text-[10px] text-gray-400">{(item.conversionRate).toFixed(1)}% conv.</div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
