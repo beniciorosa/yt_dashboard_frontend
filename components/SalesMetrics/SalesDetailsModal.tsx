@@ -97,6 +97,7 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
     // Section Visibility State
+    const [isRankingOpen, setIsRankingOpen] = useState(true);
     const [isOriginOpen, setIsOriginOpen] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [historyFilter, setHistoryFilter] = useState<'all' | 'won' | 'lost'>('won');
@@ -251,7 +252,13 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
     // --- Google Maps Logic ---
     // Initialize Map
     useEffect(() => {
-        if (!isOriginOpen || !mapRef.current || googleMap) return;
+        // Clear googleMap state if the section is closed, so it can re-init when opened
+        if (!isOriginOpen) {
+            setGoogleMap(null);
+            return;
+        }
+
+        if (!mapRef.current || googleMap) return;
 
         const initMap = async () => {
             try {
@@ -434,38 +441,38 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                         <>
                             {/* Summary Cards */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm transition-shadow hover:shadow-md">
                                     <div className="flex items-center gap-3 text-emerald-500 mb-2">
                                         <div className="p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
                                             <DollarSign size={20} />
                                         </div>
-                                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Receita Total</span>
+                                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Receita Total</span>
                                     </div>
-                                    <div className="text-2xl font-black text-gray-900 dark:text-white">
+                                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
                                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalWonRevenue)}
                                     </div>
                                 </div>
 
-                                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm transition-shadow hover:shadow-md">
                                     <div className="flex items-center gap-3 text-blue-500 mb-2">
                                         <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                                             <Calendar size={20} />
                                         </div>
-                                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Tempo Médio Venda</span>
+                                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Tempo Médio Venda</span>
                                     </div>
-                                    <div className="text-2xl font-black text-gray-900 dark:text-white">
+                                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
                                         {averageTimeForAllSellers > 0 ? `${averageTimeForAllSellers} dias` : '-'}
                                     </div>
                                 </div>
 
-                                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm transition-shadow hover:shadow-md">
                                     <div className="flex items-center gap-3 text-amber-500 mb-2">
                                         <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
                                             <ShoppingBag size={20} />
                                         </div>
-                                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Ticket Médio</span>
+                                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Ticket Médio</span>
                                     </div>
-                                    <div className="text-2xl font-black text-gray-900 dark:text-white">
+                                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
                                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(averageTicket)}
                                     </div>
                                 </div>
@@ -505,7 +512,7 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                         {/* Center Text */}
                                         <div className="absolute flex flex-col items-center justify-center pointer-events-none mt-6">
                                             <span className="text-3xl font-bold text-gray-800 dark:text-gray-100">{conversionRate.toFixed(1)}%</span>
-                                            <span className="text-xs text-gray-400 uppercase tracking-wider font-medium">Conversão</span>
+                                            <span className="text-xs text-gray-400 font-medium">Conversão</span>
                                         </div>
                                     </div>
 
@@ -513,14 +520,14 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                         <div className="flex items-center gap-2">
                                             <div className="w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-emerald-100 dark:ring-emerald-900/30"></div>
                                             <div className="flex flex-col">
-                                                <span className="text-xs text-gray-400 font-medium uppercase">Ganhos</span>
+                                                <span className="text-[10px] text-gray-400 font-medium">Ganhos</span>
                                                 <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{wonDeals.length}</span>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <div className="w-3 h-3 rounded-full bg-red-500 ring-2 ring-red-100 dark:ring-red-900/30"></div>
                                             <div className="flex flex-col">
-                                                <span className="text-xs text-gray-400 font-medium uppercase">Perdidos</span>
+                                                <span className="text-[10px] text-gray-400 font-medium">Perdidos</span>
                                                 <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{lostDeals.length}</span>
                                             </div>
                                         </div>
@@ -545,7 +552,7 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                                                 </span>
                                                                 <div className="absolute left-0 bottom-full mb-2 hidden group-hover/badge:block z-[60] animate-in slide-in-from-bottom-1 duration-200">
                                                                     <div className="bg-gray-900/95 backdrop-blur-md text-white p-3 rounded-lg shadow-xl border border-gray-700 min-w-[200px] text-[10px] whitespace-normal leading-relaxed">
-                                                                        <div className="text-gray-400 mb-1.5 uppercase tracking-widest font-bold">Extras inclusos:</div>
+                                                                        <div className="text-gray-400 mb-1.5 font-bold">Extras inclusos:</div>
                                                                         <ul className="space-y-1">
                                                                             {prod.extras.map((extra: any, i) => (
                                                                                 <li key={i} className="flex items-start gap-2">
@@ -582,11 +589,19 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
 
                             {/* Seller Ranking */}
                             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-                                <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 bg-gray-50/80 dark:bg-gray-800">
-                                    <Trophy className="w-5 h-5 text-amber-500" />
-                                    <h3 className="font-bold text-gray-800 dark:text-gray-100">Ranking de Vendedores</h3>
+                                <div
+                                    className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50/80 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
+                                    onClick={() => setIsRankingOpen(!isRankingOpen)}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <Trophy className="w-5 h-5 text-amber-500" />
+                                        <h3 className="font-bold text-gray-800 dark:text-gray-100">Ranking de Vendedores</h3>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        {isRankingOpen ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
+                                    </div>
                                 </div>
-                                <div className="overflow-x-auto">
+                                <div className={`overflow-x-auto transition-all duration-300 ${isRankingOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                     <table className="w-full text-sm text-left">
                                         <thead className="bg-gray-50 dark:bg-gray-700/50 text-xs text-gray-500 uppercase tracking-wider font-semibold">
                                             <tr>
@@ -664,7 +679,7 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                     <div className="p-6 flex flex-col md:flex-row gap-8 min-h-[400px]">
                                         {/* Ranking de Regiões */}
                                         <div className="flex-1 space-y-4">
-                                            <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Top 10 Regiões</h4>
+                                            <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300">Top 10 Regiões</h4>
                                             <div className="overflow-hidden rounded-lg border border-gray-100 dark:border-gray-700">
                                                 <table className="w-full text-xs text-left">
                                                     <thead className="bg-gray-50 dark:bg-gray-800 text-gray-500 font-semibold">
