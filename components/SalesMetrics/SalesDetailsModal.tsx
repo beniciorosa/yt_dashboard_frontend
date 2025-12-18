@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { X, Calendar, User, ShoppingBag, DollarSign, CheckCircle, XCircle, ChevronDown, ChevronUp, ChevronRight, Award, Trophy, Filter } from 'lucide-react';
-import { fetchDealsByVideo } from '../../services/salesMetricsService';
+import { fetchDealsByVideo, API_BASE_URL } from '../../services/salesMetricsService';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { importLibrary, setOptions } from '@googlemaps/js-api-loader';
 
@@ -60,6 +60,31 @@ const normalizeUF = (val: string): string => {
         'ACRE': 'AC', 'AMAPA': 'AP', 'RORAIMA': 'RR'
     };
     return map[cleaned] || cleaned;
+};
+
+const formatStateName = (val: string): string => {
+    if (!val) return '';
+    if (val.toUpperCase() === 'OUTROS') return 'Outros';
+
+    const toTitleCase = (str: string) =>
+        str.toLowerCase()
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+
+    const match = val.match(/^(.*)\s\(([A-Z]{2})\)$/);
+    if (match) {
+        return `${toTitleCase(match[1])} (${match[2]})`;
+    }
+
+    const uf = normalizeUF(val);
+    if (uf && uf !== val) {
+        // Handle case where val might be just the name without (UF)
+        const namePart = val.split(' (')[0];
+        return `${toTitleCase(namePart)} (${uf})`;
+    }
+
+    return toTitleCase(val);
 };
 
 export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClose }) => {
@@ -122,20 +147,35 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
         return Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
     };
 
+    // --- Product Analysis Logic ---
     const revenueByProduct = wonDeals.reduce((acc: any, deal) => {
         if (!deal.valor) return acc;
-        const prod = deal.item_linha || 'Outros';
-        acc[prod] = (acc[prod] || 0) + Number(deal.valor);
+        const rawProds = (deal.item_linha || 'Outros').split(';');
+
+        // Find "Mentoria" product if exists, otherwise take first
+        const mainProd = rawProds.find((p: string) => p.toLowerCase().includes('mentoria')) || rawProds[0];
+        const extras = rawProds.filter((p: string) => p !== mainProd);
+
+        if (!acc[mainProd]) {
+            acc[mainProd] = { total: 0, extras: new Set<string>() };
+        }
+
+        acc[mainProd].total += Number(deal.valor);
+        extras.forEach((e: string) => acc[mainProd].extras.add(e));
+
         return acc;
     }, {});
 
     const PRODUCT_COLORS = ['#6366f1', '#8b5cf6', '#d946ef', '#ec4899', '#f43f5e'];
 
     const productChartData = Object.keys(revenueByProduct).map(k => ({
-        name: k.length > 25 ? k.substring(0, 25) + '...' : k,
-        fullName: k,
-        value: revenueByProduct[k]
+        name: k,
+        displayName: k.length > 25 ? k.substring(0, 25) + '...' : k,
+        value: revenueByProduct[k].total,
+        extras: Array.from(revenueByProduct[k].extras)
     })).sort((a, b) => b.value - a.value).slice(0, 5);
+
+    const maxProductRevenue = Math.max(...productChartData.map(d => d.value), 1);
 
     // --- Seller Ranking Logic ---
     const sellerStats = useMemo(() => {
@@ -252,10 +292,16 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                 const g = (window as any).google;
                 if (!g || !g.maps || !g.maps.Marker) return;
 
+                const bounds = new g.maps.LatLngBounds();
+                let hasCoords = false;
+
                 salesWithUF.forEach((sale) => {
                     const ufCode = normalizeUF(sale.uf_padrao);
                     const coords = UF_COORDS[ufCode];
                     if (!coords) return;
+
+                    hasCoords = true;
+                    bounds.extend(coords);
 
                     const jitterLat = (Math.random() - 0.5) * 0.4;
                     const jitterLng = (Math.random() - 0.5) * 0.4;
@@ -275,6 +321,15 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                     });
                     markersRef.current.push(marker);
                 });
+
+                if (hasCoords) {
+                    googleMap.fitBounds(bounds);
+                    // Prevent too much zoom if only one state
+                    const listener = googleMap.addListener('idle', () => {
+                        if (googleMap.getZoom() > 6) googleMap.setZoom(6);
+                        g.maps.event.removeListener(listener);
+                    });
+                }
             } catch (err) {
                 console.error("Error updating markers:", err);
             }
@@ -472,34 +527,55 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                     </div>
                                 </div>
 
-                                {/* Revenue Product - Colored Bars */}
+                                {/* Revenue Product - Custom Premium Bar List */}
                                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col relative">
                                     <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-6">Top Produtos (Receita)</h3>
-                                    <div className="flex-1 min-h-[160px]">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={productChartData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }} barSize={16}>
-                                                <XAxis type="number" hide />
-                                                <YAxis
-                                                    type="category"
-                                                    dataKey="name"
-                                                    width={140}
-                                                    tick={{ fill: '#4b5563', fontSize: 13, fontWeight: 600 }}
-                                                    axisLine={false}
-                                                    tickLine={false}
-                                                />
-                                                <Tooltip
-                                                    cursor={{ fill: 'transparent' }}
-                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', backgroundColor: 'rgba(255, 255, 255, 0.95)' }}
-                                                    labelStyle={{ color: '#111827', fontWeight: 'bold', marginBottom: '4px' }}
-                                                    formatter={(value: any) => [new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value), 'Receita']}
-                                                />
-                                                <Bar dataKey="value" radius={[0, 6, 6, 0]} background={{ fill: '#f3f4f6' }}>
-                                                    {productChartData.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={PRODUCT_COLORS[index % PRODUCT_COLORS.length]} />
-                                                    ))}
-                                                </Bar>
-                                            </BarChart>
-                                        </ResponsiveContainer>
+                                    <div className="flex-1 space-y-5">
+                                        {productChartData.map((prod, index) => (
+                                            <div key={prod.name} className="space-y-1.5 group/item">
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-gray-700 dark:text-gray-200 truncate max-w-[180px]" title={prod.name}>
+                                                            {prod.displayName}
+                                                        </span>
+                                                        {prod.extras.length > 0 && (
+                                                            <div className="relative group/badge">
+                                                                <span className="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-[10px] font-black cursor-help border border-blue-100 dark:border-blue-800 transition-all hover:scale-110">
+                                                                    +{prod.extras.length}
+                                                                </span>
+                                                                <div className="absolute left-0 bottom-full mb-2 hidden group-hover/badge:block z-[60] animate-in slide-in-from-bottom-1 duration-200">
+                                                                    <div className="bg-gray-900/95 backdrop-blur-md text-white p-3 rounded-lg shadow-xl border border-gray-700 min-w-[200px] text-[10px] whitespace-normal leading-relaxed">
+                                                                        <div className="text-gray-400 mb-1.5 uppercase tracking-widest font-bold">Extras inclusos:</div>
+                                                                        <ul className="space-y-1">
+                                                                            {prod.extras.map((extra: any, i) => (
+                                                                                <li key={i} className="flex items-start gap-2">
+                                                                                    <span className="text-blue-400 mt-0.5">•</span>
+                                                                                    <span>{extra}</span>
+                                                                                </li>
+                                                                            ))}
+                                                                        </ul>
+                                                                    </div>
+                                                                    <div className="w-2 h-2 bg-gray-900 border-r border-b border-gray-700 rotate-45 ml-4 -mt-1"></div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-gray-900 dark:text-white">
+                                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prod.value)}
+                                                    </span>
+                                                </div>
+                                                <div className="h-2.5 w-full bg-gray-100 dark:bg-gray-700/50 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full rounded-full transition-all duration-1000 ease-out shadow-sm"
+                                                        style={{
+                                                            width: `${(prod.value / maxProductRevenue) * 100}%`,
+                                                            backgroundColor: PRODUCT_COLORS[index % PRODUCT_COLORS.length],
+                                                            filter: 'brightness(1.1)'
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             </div>
@@ -605,7 +681,21 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                                                                 className={`hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition-colors ${selectedUF === stat.uf ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}
                                                                 onClick={() => handleUFClick(stat.uf)}
                                                             >
-                                                                <td className="px-4 py-3 font-bold text-gray-900 dark:text-white uppercase">{stat.uf}</td>
+                                                                <td className="px-4 py-3 text-gray-900 dark:text-white flex items-center gap-3">
+                                                                    {(() => {
+                                                                        const uf = normalizeUF(stat.uf);
+                                                                        if (!uf || uf === 'OUTROS') return null;
+                                                                        return (
+                                                                            <img
+                                                                                src={`${API_BASE_URL}/api/sales/icons/${uf}`}
+                                                                                alt={uf}
+                                                                                className="w-5 h-3.5 object-cover rounded shadow-sm border border-gray-100 dark:border-gray-700"
+                                                                                onError={(e) => (e.currentTarget.style.display = 'none')}
+                                                                            />
+                                                                        );
+                                                                    })()}
+                                                                    {formatStateName(stat.uf)}
+                                                                </td>
                                                                 <td className="px-4 py-3 text-center font-medium text-gray-600 dark:text-gray-400">{stat.count}</td>
                                                                 <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200">
                                                                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stat.revenue)}
@@ -750,6 +840,6 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, onClos
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     );
 };

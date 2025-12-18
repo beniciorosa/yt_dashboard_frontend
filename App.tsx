@@ -14,7 +14,7 @@ import { Loader2, Wrench } from 'lucide-react';
 
 const App: React.FC = () => {
   // Updated state type to include new tool modules
-  const [activeModule, setActiveModule] = useState<'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments' | 'promotions' | 'sales-metrics'>('dashboard');
+  const [activeModule, setActiveModule] = useState<'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments' | 'promotions' | 'sales-metrics'>('competitors');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -66,7 +66,7 @@ const App: React.FC = () => {
         if (existingToken) {
           console.log("Valid session found, ignoring auth code.");
           setIsLoggedIn(true);
-          setActiveModule('dashboard');
+          setActiveModule('competitors');
           setIsAuthProcessing(false);
           return;
         }
@@ -74,7 +74,7 @@ const App: React.FC = () => {
         const success = await handleAuthCallback(code);
         if (success) {
           setIsLoggedIn(true);
-          setActiveModule('dashboard');
+          setActiveModule('competitors');
         } else {
           alert('Falha na autenticação com Google. Tente novamente.');
         }
