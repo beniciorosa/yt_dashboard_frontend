@@ -168,6 +168,29 @@ export const UtmGenerator: React.FC = () => {
         }
     };
 
+    const handleDeleteLink = async (id: string, slug: string) => {
+        if (!confirm(`Tem certeza que deseja apagar o link "${slug}"? Esta ação não pode ser desfeita.`)) {
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('yt_links')
+                .delete()
+                .eq('id', id);
+
+            if (!error) {
+                // Update local state by filtering out the deleted link
+                setVideoLinksHistory(prev => prev.filter(link => link.id !== id));
+            } else {
+                alert('Erro ao apagar o link: ' + error.message);
+            }
+        } catch (error) {
+            console.error('Error deleting link:', error);
+            alert('Erro de conexão ao apagar o link.');
+        }
+    };
+
     const loadDrafts = async () => {
         try {
             const res = await fetch(`${API_BASE_URL}/api/utm/links`);
@@ -345,7 +368,7 @@ export const UtmGenerator: React.FC = () => {
         try {
             const { data, error } = await supabase
                 .from('yt_links')
-                .select('created_at, short_url, slug')
+                .select('id, created_at, short_url, slug')
                 .eq('video_id', vidId)
                 .order('created_at', { ascending: false });
 
@@ -831,12 +854,23 @@ export const UtmGenerator: React.FC = () => {
                                                         </div>
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{h.short_url}</span>
-                                                            <button
-                                                                onClick={() => copyToClipboard(h.short_url, setShortCopySuccess)}
-                                                                className="p-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-md text-emerald-600 dark:text-emerald-400 transition-colors"
-                                                            >
-                                                                <Copy className="w-3.5 h-3.5" />
-                                                            </button>
+                                                            <div className="flex items-center bg-slate-50 dark:bg-gray-700/50 rounded-md border border-slate-200 dark:border-gray-600 p-0.5">
+                                                                <button
+                                                                    onClick={() => copyToClipboard(h.short_url, setShortCopySuccess)}
+                                                                    className="p-1.5 hover:bg-white dark:hover:bg-gray-600 rounded text-indigo-600 dark:text-indigo-400 transition-colors"
+                                                                    title="Copiar Link"
+                                                                >
+                                                                    <Copy className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <div className="w-[1px] h-3 bg-slate-300 dark:bg-gray-600 mx-0.5" />
+                                                                <button
+                                                                    onClick={() => handleDeleteLink(h.id, h.slug)}
+                                                                    className="p-1.5 hover:bg-white dark:hover:bg-gray-600 rounded text-rose-500 dark:text-rose-400 transition-colors"
+                                                                    title="Apagar Link"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 ))}
