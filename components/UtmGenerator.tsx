@@ -3,8 +3,10 @@ import { InputGroup } from './UtmInputGroup';
 import {
     Link2, Youtube, Calendar, Settings2, Sparkles, Copy, Check, ExternalLink,
     AlertCircle, Zap, Save, History, Trash2, Clock, ChevronDown, X, ArrowRight,
-    FolderHeart, FileEdit, Eraser
+    FolderHeart, FileEdit, Eraser, Search, Loader2, MessageSquareText, ChevronUp, RefreshCw
 } from 'lucide-react';
+import { supabase } from '../services/supabaseClient';
+import { getAccessToken, initiateLogin } from '../services/authService';
 
 // @ts-ignore
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080' : 'https://yt-dashboard-backend.vercel.app');
@@ -21,6 +23,14 @@ interface SavedDestination {
     url: string;
 }
 
+interface VideoMetadata {
+    video_id: string;
+    title: string;
+    published_at: string;
+    thumbnail_url: string;
+    description?: string;
+}
+
 interface SavedSession {
     id: string;
     type: 'draft' | 'auto';
@@ -32,6 +42,8 @@ interface SavedSession {
     utmParams: UTMParams;
     generatedLink: string;
     shortLink: string;
+    video_id?: string;
+    video_url?: string;
 }
 
 const DEFAULT_UTM = {
@@ -73,6 +85,9 @@ export const UtmGenerator: React.FC = () => {
     const [baseUrl, setBaseUrl] = useState('');
     const [date, setDate] = useState(getTodayString());
 
+    const [videoId, setVideoId] = useState('');
+    const [videoUrl, setVideoUrl] = useState('');
+
     const [slug, setSlug] = useState('');
     const [utmParams, setUtmParams] = useState<UTMParams>(DEFAULT_UTM);
     const [generatedLink, setGeneratedLink] = useState('');
@@ -84,6 +99,21 @@ export const UtmGenerator: React.FC = () => {
     const [shortCopySuccess, setShortCopySuccess] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Video Search State
+    const [videoSearch, setVideoSearch] = useState('');
+    const [videoResults, setVideoResults] = useState<VideoMetadata[]>([]);
+    const [isSearchingVideos, setIsSearchingVideos] = useState(false);
+    const [showVideoDropdown, setShowVideoDropdown] = useState(false);
+
+    // Description State
+    const [showDescription, setShowDescription] = useState(false);
+    const [description, setDescription] = useState('');
+    const [isHistoryLoadingDescription, setIsHistoryLoadingDescription] = useState(false);
+    const [isLoadingFromYoutube, setIsLoadingFromYoutube] = useState(false);
+    const [isSavingDescription, setIsSavingDescription] = useState(false);
+    const [videoLinksHistory, setVideoLinksHistory] = useState<any[]>([]);
+    const [isLoadingVideoHistory, setIsLoadingVideoHistory] = useState(false);
+
     const [savedDestinations, setSavedDestinations] = useState<SavedDestination[]>([]);
     const [sessions, setSessions] = useState<SavedSession[]>([]);
     const [showUrlDropdown, setShowUrlDropdown] = useState(false);
@@ -91,6 +121,7 @@ export const UtmGenerator: React.FC = () => {
     const [newUrlAlias, setNewUrlAlias] = useState('');
 
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const videoSearchRef = useRef<HTMLDivElement>(null);
     const isLoadingSessionRef = useRef(false);
 
     useEffect(() => {
@@ -139,7 +170,9 @@ export const UtmGenerator: React.FC = () => {
                     slug: item.slug || '',
                     utmParams: extractedUtms,
                     generatedLink: item.final_url || '',
-                    shortLink: item.short_url || ''
+                    shortLink: item.short_url || '',
+                    video_id: item.video_id,
+                    video_url: item.video_url
                 };
             });
             setSessions(mappedSessions);
@@ -148,14 +181,90 @@ export const UtmGenerator: React.FC = () => {
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
+            // URL Dropdown logic
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setShowUrlDropdown(false);
                 setIsSavingUrl(false);
+            }
+            // Video Search Dropdown logic
+            if (videoSearchRef.current && !videoSearchRef.current.contains(event.target as Node)) {
+                setShowVideoDropdown(false);
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    // Video Search Logic
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            searchVideos();
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [videoSearch]);
+
+    const searchVideos = async () => {
+        if (!videoSearch || videoSearch.length < 2) {
+            setVideoResults([]);
+            return;
+        }
+
+        setIsSearchingVideos(true);
+        try {
+            const { data, error } = await supabase
+                .from('yt_myvideos')
+                .select('video_id, title, published_at, thumbnail_url, description')
+                .or(`title.ilike.%${videoSearch}%,video_id.eq.${videoSearch}`)
+                .limit(10);
+
+            if (error) throw error;
+            setVideoResults(data || []);
+            setShowVideoDropdown(true);
+        } catch (e) {
+            console.error("Erro ao buscar vídeos:", e);
+        } finally {
+            setIsSearchingVideos(false);
+        }
+    };
+
+    const handleSelectVideo = (video: VideoMetadata) => {
+        setTitle(video.title);
+        setVideoId(video.video_id);
+        setVideoUrl(`https://www.youtube.com/watch?v=${video.video_id}`);
+        setVideoSearch(video.title);
+        setDescription(video.description || '');
+
+        if (video.published_at) {
+            try {
+                const pubDate = new Date(video.published_at);
+                const yyyy = pubDate.getFullYear();
+                const mm = String(pubDate.getMonth() + 1).padStart(2, '0');
+                const dd = String(pubDate.getDate()).padStart(2, '0');
+                setDate(`${yyyy}-${mm}-${dd}`);
+            } catch (e) { }
+        }
+
+        setShowVideoDropdown(false);
+        fetchVideoLinksHistory(video.video_id);
+    };
+
+    const fetchVideoLinksHistory = async (vidId: string) => {
+        setIsLoadingVideoHistory(true);
+        try {
+            const { data, error } = await supabase
+                .from('yt_links')
+                .select('created_at, short_url, slug')
+                .eq('video_id', vidId)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            setVideoLinksHistory(data || []);
+        } catch (e) {
+            console.error("Erro ao buscar histórico do vídeo:", e);
+        } finally {
+            setIsLoadingVideoHistory(false);
+        }
+    };
 
     const confirmSaveUrl = () => {
         if (!baseUrl || !newUrlAlias) return;
@@ -206,7 +315,9 @@ export const UtmGenerator: React.FC = () => {
             final_url: generatedLink,
             short_url: shortLink || null,
             short_code: shortCode,
-            is_draft: type === 'draft'
+            is_draft: type === 'draft',
+            video_id: videoId || null,
+            video_url: videoUrl || null
         };
 
         try {
@@ -240,7 +351,10 @@ export const UtmGenerator: React.FC = () => {
         setShortLink('');
 
         const formattedDate = getFormattedDateForSlug(date);
-        const prefix = `yt-${formattedDate}`;
+
+        // New Format: YT-DATA-ID-TITULO
+        // Prefix: yt-191225-Na2KJzVWnP8
+        const prefix = `yt-${formattedDate}${videoId ? `-${videoId}` : ''}`;
 
         try {
             const res = await fetch(`${API_BASE_URL}/api/utm/slug`, {
@@ -298,7 +412,9 @@ export const UtmGenerator: React.FC = () => {
                 final_url: generatedLink,
                 short_url: data.shortUrl,
                 short_code: shortCode,
-                is_draft: false
+                is_draft: false,
+                video_id: videoId || null,
+                video_url: videoUrl || null
             };
 
             await fetch(`${API_BASE_URL}/api/utm/links`, {
@@ -321,18 +437,22 @@ export const UtmGenerator: React.FC = () => {
         setUtmParams(session.utmParams);
         setGeneratedLink(session.generatedLink);
         setShortLink(session.shortLink);
+        setVideoId(session.video_id || '');
+        setVideoUrl(session.video_url || '');
+        setVideoSearch(session.title || '');
         setShowHistory(false);
         setError(null);
         setTimeout(() => { isLoadingSessionRef.current = false; }, 200);
     };
 
     const clearForm = () => {
-        setTitle('');
-        setDate(getTodayString());
-        setBaseUrl('');
-        setSlug('');
         setGeneratedLink('');
         setShortLink('');
+        setVideoId('');
+        setVideoUrl('');
+        setVideoSearch('');
+        setDescription('');
+        setVideoLinksHistory([]);
         setError(null);
     };
 
@@ -362,6 +482,75 @@ export const UtmGenerator: React.FC = () => {
         navigator.clipboard.writeText(text);
         setSuccess(true);
         setTimeout(() => setSuccess(false), 2000);
+    };
+
+    const loadDescriptionFromYoutube = async () => {
+        if (!videoId) return;
+        setIsLoadingFromYoutube(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/youtube/proxy?endpoint=videos&part=snippet&id=${videoId}`);
+            const data = await res.json();
+            if (data.items && data.items.length > 0) {
+                const fullDesc = data.items[0].snippet.description;
+                setDescription(fullDesc);
+            }
+        } catch (e) {
+            console.error("Erro ao carregar descrição:", e);
+        } finally {
+            setIsLoadingFromYoutube(false);
+        }
+    };
+
+    const saveDescriptionToDatabase = async () => {
+        if (!videoId) return;
+        setIsSavingDescription(true);
+        setError(null);
+        try {
+            // 1. Update Supabase
+            const { error: supabaseError } = await supabase
+                .from('yt_myvideos')
+                .update({ description })
+                .eq('video_id', videoId);
+
+            if (supabaseError) throw supabaseError;
+
+            // 2. Update YouTube (if token available or after login)
+            const token = await getAccessToken();
+            if (!token) {
+                // If not authenticated, we could trigger login or just warn
+                // But user wants a redirect ONLY if clicking save and not logged in
+                initiateLogin();
+                return;
+            }
+
+            const res = await fetch(`${API_BASE_URL}/api/youtube/proxy?endpoint=videos&part=snippet`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    id: videoId,
+                    snippet: {
+                        title: title, // YouTube requires title in snippet for update
+                        categoryId: "27", // Default to Education or fetch current
+                        description: description
+                    }
+                })
+            });
+
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.message || "Falha ao atualizar no YouTube");
+            }
+
+            alert("Descrição salva com sucesso no banco e no YouTube!");
+        } catch (e: any) {
+            console.error("Erro ao salvar descrição:", e);
+            setError(`Erro ao salvar: ${e.message}`);
+        } finally {
+            setIsSavingDescription(false);
+        }
     };
 
     return (
@@ -424,11 +613,94 @@ export const UtmGenerator: React.FC = () => {
                         {/* Form Content */}
                         <div className="p-6 space-y-6 flex-1">
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                                <div className="md:col-span-8">
-                                    <InputGroup label="Título do Vídeo" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: R$1 milhão por mês no TikTok Shop" icon={<Youtube className="w-4 h-4" />} />
+
+                                {/* Video Search Field */}
+                                <div className="md:col-span-12 relative" ref={videoSearchRef}>
+                                    <label className="text-sm font-medium text-slate-700 dark:text-gray-300 flex items-center gap-2 mb-1.5">
+                                        <Search className="w-4 h-4" />
+                                        Buscar Vídeo do Canal
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            value={videoSearch}
+                                            onChange={(e) => setVideoSearch(e.target.value)}
+                                            onFocus={() => videoResults.length > 0 && setShowVideoDropdown(true)}
+                                            placeholder="Título, URL ou ID do vídeo..."
+                                            className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white pr-10"
+                                        />
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                            {isSearchingVideos ? <Loader2 className="w-4 h-4 animate-spin text-slate-400" /> : <Search className="w-4 h-4 text-slate-400" />}
+                                        </div>
+                                    </div>
+
+                                    {showVideoDropdown && videoResults.length > 0 && (
+                                        <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-xl z-30 max-h-64 overflow-y-auto">
+                                            {videoResults.map((video) => (
+                                                <div
+                                                    key={video.video_id}
+                                                    onClick={() => handleSelectVideo(video)}
+                                                    className="p-3 hover:bg-slate-50 dark:hover:bg-gray-700 cursor-pointer flex gap-3 border-b border-slate-50 dark:border-gray-700 last:border-0"
+                                                >
+                                                    <img src={video.thumbnail_url} className="w-16 h-9 rounded object-cover shrink-0" alt="" />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-sm font-semibold text-slate-800 dark:text-gray-100 truncate">{video.title}</div>
+                                                        <div className="text-xs text-slate-500 dark:text-gray-400 flex items-center gap-2 mt-1">
+                                                            <Youtube className="w-3 h-3" /> {video.video_id}
+                                                            <span className="opacity-50">|</span>
+                                                            <Calendar className="w-3 h-3" /> {new Date(video.published_at).toLocaleDateString()}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Video History Section */}
+                                    {videoLinksHistory.length > 0 && (
+                                        <div className="mt-3 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-xl p-4 border border-indigo-100 dark:border-indigo-800/50">
+                                            <h4 className="text-xs font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                                <History className="w-3.5 h-3.5" /> Links já gerados para este vídeo
+                                            </h4>
+                                            <div className="space-y-2">
+                                                {videoLinksHistory.map((h, idx) => (
+                                                    <div key={idx} className="flex items-center justify-between bg-white dark:bg-gray-800 p-2.5 rounded-lg border border-indigo-50 dark:border-gray-700 shadow-sm">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-xs font-bold text-slate-800 dark:text-gray-200 truncate max-w-[200px]">{h.slug}</span>
+                                                            <span className="text-[10px] text-slate-500 dark:text-gray-400">{new Date(h.created_at).toLocaleDateString('pt-BR')}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{h.short_url}</span>
+                                                            <button
+                                                                onClick={() => copyToClipboard(h.short_url, setShortCopySuccess)}
+                                                                className="p-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-md text-emerald-600 dark:text-emerald-400 transition-colors"
+                                                            >
+                                                                <Copy className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="md:col-span-4">
-                                    <InputGroup label="Data de Publicação" type="date" value={date} onChange={(e) => setDate(e.target.value)} icon={<Calendar className="w-4 h-4" />} />
+
+                                <div className="md:col-span-12">
+                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                                        <div className="md:col-span-8">
+                                            <InputGroup label="Título do Vídeo" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: R$1 milhão por mês no TikTok Shop" icon={<Youtube className="w-4 h-4" />} />
+                                        </div>
+                                        <div className="md:col-span-4">
+                                            <InputGroup label="Data de Publicação" type="date" value={date} onChange={(e) => setDate(e.target.value)} icon={<Calendar className="w-4 h-4" />} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="md:col-span-6">
+                                    <InputGroup label="ID do Vídeo" value={videoId} onChange={(e) => setVideoId(e.target.value)} placeholder="Ex: Na2KJzVWnP8" icon={<Youtube className="w-4 h-4" />} />
+                                </div>
+                                <div className="md:col-span-6">
+                                    <InputGroup label="URL do Vídeo" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="Ex: https://youtube.com/..." icon={<Youtube className="w-4 h-4" />} />
                                 </div>
 
                                 <div className="md:col-span-12 relative" ref={dropdownRef}>
@@ -538,6 +810,52 @@ export const UtmGenerator: React.FC = () => {
                                 <button onClick={() => saveSession('draft')} disabled={!title} className="bg-slate-800 hover:bg-slate-900 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg flex items-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed">
                                     <FolderHeart className="w-5 h-5 text-amber-400" /> SALVAR RASCUNHO
                                 </button>
+                            </div>
+
+                            {/* Video Description Section */}
+                            <div className="mt-8 border-t border-slate-100 dark:border-gray-700 pt-6">
+                                <button
+                                    onClick={() => setShowDescription(!showDescription)}
+                                    className="w-full flex items-center justify-between p-4 bg-slate-50 dark:bg-gray-800/50 rounded-xl border border-slate-200 dark:border-gray-700 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <MessageSquareText className="w-5 h-5 text-indigo-600" />
+                                        <span className="font-bold text-slate-800 dark:text-gray-200">DESCRIÇÃO DO VÍDEO</span>
+                                    </div>
+                                    {showDescription ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+                                </button>
+
+                                {showDescription && (
+                                    <div className="mt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                                        <div className="flex justify-between items-center">
+                                            <p className="text-xs text-slate-500 dark:text-gray-400">Edite e salve a descrição que será atualizada na base de dados.</p>
+                                            <button
+                                                onClick={loadDescriptionFromYoutube}
+                                                disabled={!videoId || isLoadingFromYoutube}
+                                                className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-lg border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 transition-colors disabled:opacity-50"
+                                            >
+                                                {isLoadingFromYoutube ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                                CARREGAR DESCRIÇÃO
+                                            </button>
+                                        </div>
+                                        <textarea
+                                            value={description}
+                                            onChange={(e) => setDescription(e.target.value)}
+                                            placeholder="A descrição do vídeo aparecerá aqui..."
+                                            className="w-full h-80 px-4 py-3 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl text-slate-600 dark:text-gray-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+                                        />
+                                        <div className="flex justify-end">
+                                            <button
+                                                onClick={saveDescriptionToDatabase}
+                                                disabled={!videoId || isSavingDescription}
+                                                className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-all shadow-md disabled:opacity-50"
+                                            >
+                                                {isSavingDescription ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                                SALVAR DESCRIÇÃO
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
