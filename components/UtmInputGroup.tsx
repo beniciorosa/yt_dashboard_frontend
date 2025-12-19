@@ -8,6 +8,7 @@ interface InputGroupProps {
     type?: string;
     className?: string;
     icon?: React.ReactNode;
+    rightLabel?: React.ReactNode;
     disabled?: boolean;
 }
 
@@ -19,6 +20,7 @@ export const InputGroup: React.FC<InputGroupProps> = ({
     type = "text",
     className = "",
     icon,
+    rightLabel,
     disabled = false,
 }) => {
     const inputRef = useRef<HTMLInputElement>(null);
@@ -44,14 +46,23 @@ export const InputGroup: React.FC<InputGroupProps> = ({
         }
     };
 
+    const labelContent = (
+        <div className="flex items-center justify-between w-full min-h-[32px]">
+            <div className="flex items-center gap-2">
+                {icon}
+                {label}
+            </div>
+            {rightLabel}
+        </div>
+    );
+
     return (
         <div className={`flex flex-col gap-1.5 ${className}`}>
             <label
                 onClick={handleLabelClick}
-                className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2 cursor-pointer select-none"
+                className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none flex items-center"
             >
-                {icon}
-                {label}
+                {labelContent}
             </label>
             <input
                 ref={inputRef}

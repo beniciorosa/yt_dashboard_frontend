@@ -3,7 +3,8 @@ import { InputGroup } from './UtmInputGroup';
 import {
     Link2, Youtube, Calendar, Settings2, Sparkles, Copy, Check, ExternalLink,
     AlertCircle, Zap, Save, History, Trash2, Clock, ChevronDown, X, ArrowRight,
-    FolderHeart, FileEdit, Eraser, Search, Loader2, MessageSquareText, ChevronUp, RefreshCw
+    FolderHeart, FileEdit, Eraser, Search, Loader2, MessageSquareText, ChevronUp, RefreshCw,
+    ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { getAccessToken, initiateLogin } from '../services/authService';
@@ -29,6 +30,12 @@ interface VideoMetadata {
     published_at: string;
     thumbnail_url: string;
     description?: string;
+}
+
+interface VideoStats {
+    views: string;
+    likes: string;
+    comments: string;
 }
 
 interface SavedSession {
@@ -114,6 +121,10 @@ export const UtmGenerator: React.FC = () => {
     const [videoLinksHistory, setVideoLinksHistory] = useState<any[]>([]);
     const [isLoadingVideoHistory, setIsLoadingVideoHistory] = useState(false);
     const [videoCategoryId, setVideoCategoryId] = useState('27');
+    const [allVideos, setAllVideos] = useState<VideoMetadata[]>([]);
+    const [currentIndex, setCurrentIndex] = useState<number>(-1);
+    const [videoStats, setVideoStats] = useState<VideoStats | null>(null);
+    const [isLoadingStats, setIsLoadingStats] = useState(false);
 
     const [savedDestinations, setSavedDestinations] = useState<SavedDestination[]>([]);
     const [sessions, setSessions] = useState<SavedSession[]>([]);
@@ -124,6 +135,7 @@ export const UtmGenerator: React.FC = () => {
     const dropdownRef = useRef<HTMLDivElement>(null);
     const videoSearchRef = useRef<HTMLDivElement>(null);
     const isLoadingSessionRef = useRef(false);
+    const isNavigatingRef = useRef(false);
 
     useEffect(() => {
         const storedUrls = localStorage.getItem('yt_utm_saved_urls');
@@ -139,7 +151,22 @@ export const UtmGenerator: React.FC = () => {
             } catch (e) { }
         }
         loadDrafts();
+        fetchAllVideos();
     }, []);
+
+    const fetchAllVideos = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('yt_myvideos')
+                .select('video_id, title, published_at, thumbnail_url, description')
+                .order('published_at', { ascending: true });
+
+            if (error) throw error;
+            setAllVideos(data || []);
+        } catch (e) {
+            console.error("Erro ao buscar lista completa de vídeos:", e);
+        }
+    };
 
     const loadDrafts = async () => {
         try {
@@ -196,8 +223,11 @@ export const UtmGenerator: React.FC = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Video Search Logic
     useEffect(() => {
+        if (isNavigatingRef.current) {
+            isNavigatingRef.current = false;
+            return;
+        }
         const timer = setTimeout(() => {
             searchVideos();
         }, 500);
@@ -205,7 +235,23 @@ export const UtmGenerator: React.FC = () => {
     }, [videoSearch]);
 
     const searchVideos = async () => {
-        if (!videoSearch || videoSearch.length < 2) {
+        if (!videoSearch) {
+            setVideoResults([]);
+            return;
+        }
+
+        // Search by Index Pattern (n3, n200, etc)
+        const nMatch = videoSearch.match(/^n(\d+)$/i);
+        if (nMatch) {
+            const index = parseInt(nMatch[1]) - 1;
+            if (index >= 0 && index < allVideos.length) {
+                handleSelectVideo(allVideos[index]);
+                setVideoSearch('');
+                return;
+            }
+        }
+
+        if (videoSearch.length < 2) {
             setVideoResults([]);
             return;
         }
@@ -228,6 +274,27 @@ export const UtmGenerator: React.FC = () => {
         }
     };
 
+    const fetchVideoStats = async (vidId: string) => {
+        setIsLoadingStats(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/youtube/proxy?endpoint=videos&part=statistics&id=${vidId}`);
+            const data = await res.json();
+            if (data.items && data.items.length > 0) {
+                const stats = data.items[0].statistics;
+                setVideoStats({
+                    views: stats.viewCount,
+                    likes: stats.likeCount,
+                    comments: stats.commentCount
+                });
+            }
+        } catch (e) {
+            console.error("Erro ao carregar estatísticas:", e);
+            setVideoStats(null);
+        } finally {
+            setIsLoadingStats(false);
+        }
+    };
+
     const handleSelectVideo = (video: VideoMetadata) => {
         setTitle(video.title);
         setVideoId(video.video_id);
@@ -246,7 +313,28 @@ export const UtmGenerator: React.FC = () => {
         }
 
         setShowVideoDropdown(false);
+        setShowDescription(true);
         fetchVideoLinksHistory(video.video_id);
+        fetchVideoStats(video.video_id);
+
+        // Find index in allVideos to set global numbering
+        const index = allVideos.findIndex(v => v.video_id === video.video_id);
+        setCurrentIndex(index);
+    };
+
+    const navigateVideo = (direction: 'next' | 'prev') => {
+        if (allVideos.length === 0) return;
+        let newIndex = currentIndex;
+        if (direction === 'next' && currentIndex < allVideos.length - 1) {
+            newIndex = currentIndex + 1;
+        } else if (direction === 'prev' && currentIndex > 0) {
+            newIndex = currentIndex - 1;
+        }
+
+        if (newIndex !== currentIndex) {
+            isNavigatingRef.current = true;
+            handleSelectVideo(allVideos[newIndex]);
+        }
     };
 
     const fetchVideoLinksHistory = async (vidId: string) => {
@@ -454,6 +542,7 @@ export const UtmGenerator: React.FC = () => {
         setVideoSearch('');
         setDescription('');
         setVideoLinksHistory([]);
+        setShowDescription(false);
         setError(null);
     };
 
@@ -564,10 +653,9 @@ export const UtmGenerator: React.FC = () => {
 
     return (
         <div className="relative h-full flex flex-col font-sans transition-colors duration-200">
-
             {/* Main Content Area */}
             <div className={`flex-1 transition-all duration-300 ${showHistory ? 'mr-80' : ''}`}>
-                <div className="flex justify-center pb-8">
+                <div className="flex justify-center pb-8 p-4 sm:p-6 lg:p-8">
                     <div className="w-full max-w-4xl bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-slate-100 dark:border-gray-700 flex flex-col">
 
                         {/* Header */}
@@ -582,25 +670,13 @@ export const UtmGenerator: React.FC = () => {
                                 </p>
                             </div>
                             <div className="flex gap-2">
-                                <button
-                                    onClick={clearForm}
-                                    className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
-                                    title="Limpar Campos"
-                                >
+                                <button onClick={clearForm} className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors" title="Limpar Campos">
                                     <Eraser className="w-5 h-5" />
                                 </button>
-                                <button
-                                    onClick={() => setShowHistory(!showHistory)}
-                                    className={`p-2 rounded-full transition-colors ${showHistory ? 'bg-white text-indigo-600' : 'bg-white/10 hover:bg-white/20'}`}
-                                    title="Histórico Salvo"
-                                >
+                                <button onClick={() => setShowHistory(!showHistory)} className={`p-2 rounded-full transition-colors ${showHistory ? 'bg-white text-indigo-600' : 'bg-white/10 hover:bg-white/20'}`} title="Histórico Salvo">
                                     <History className="w-5 h-5" />
                                 </button>
-                                <button
-                                    onClick={() => setShowSettings(!showSettings)}
-                                    className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
-                                    title="Configurações"
-                                >
+                                <button onClick={() => setShowSettings(!showSettings)} className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors" title="Configurações">
                                     <Settings2 className="w-5 h-5" />
                                 </button>
                             </div>
@@ -619,7 +695,6 @@ export const UtmGenerator: React.FC = () => {
                             </div>
                         )}
 
-                        {/* Form Content */}
                         <div className="p-6 space-y-6 flex-1">
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
 
@@ -665,6 +740,79 @@ export const UtmGenerator: React.FC = () => {
                                         </div>
                                     )}
 
+                                    {/* Video Stats Card */}
+                                    {videoId && (
+                                        <div className="mt-4 bg-slate-50 dark:bg-gray-900/50 rounded-2xl border border-slate-200 dark:border-gray-700 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+                                            <div className="flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-slate-200 dark:divide-gray-700">
+                                                <div className="sm:w-1/3 relative group aspect-video sm:aspect-auto">
+                                                    <img src={`https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`}
+                                                        onError={(e) => { (e.target as HTMLImageElement).src = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` }}
+                                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                                        alt="Video Thumbnail" />
+                                                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                                                        <div className="w-12 h-12 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
+                                                            <Youtube className="w-6 h-6 text-red-600" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1 p-5 space-y-4">
+                                                    <div>
+                                                        <h3 className="text-lg font-bold text-slate-800 dark:text-gray-100 line-clamp-2 leading-tight mb-2">
+                                                            {title}
+                                                        </h3>
+                                                        <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-gray-400">
+                                                            <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
+                                                            <span className="opacity-30">|</span>
+                                                            <span className="flex items-center gap-1 font-mono uppercase bg-slate-100 dark:bg-gray-800 px-1.5 py-0.5 rounded tracking-wider">{videoId}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-3 gap-3">
+                                                        <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-100 dark:border-gray-700 shadow-sm flex flex-col items-center justify-center gap-1 overflow-hidden">
+                                                            <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 mb-0.5">
+                                                                <ExternalLink className="w-4 h-4" />
+                                                                <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">Views</span>
+                                                            </div>
+                                                            {isLoadingStats ? (
+                                                                <div className="h-5 w-12 bg-slate-100 dark:bg-gray-700 animate-pulse rounded" />
+                                                            ) : (
+                                                                <span className="text-sm font-black text-slate-800 dark:text-gray-100">
+                                                                    {videoStats?.views ? parseInt(videoStats.views).toLocaleString('pt-BR') : '---'}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-100 dark:border-gray-700 shadow-sm flex flex-col items-center justify-center gap-1 overflow-hidden">
+                                                            <div className="flex items-center gap-1.5 text-rose-500 mb-0.5">
+                                                                <FolderHeart className="w-4 h-4" />
+                                                                <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">Likes</span>
+                                                            </div>
+                                                            {isLoadingStats ? (
+                                                                <div className="h-5 w-12 bg-slate-100 dark:bg-gray-700 animate-pulse rounded" />
+                                                            ) : (
+                                                                <span className="text-sm font-black text-slate-800 dark:text-gray-100">
+                                                                    {videoStats?.likes ? parseInt(videoStats.likes).toLocaleString('pt-BR') : '---'}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-100 dark:border-gray-700 shadow-sm flex flex-col items-center justify-center gap-1 overflow-hidden">
+                                                            <div className="flex items-center gap-1.5 text-emerald-500 mb-0.5">
+                                                                <MessageSquareText className="w-4 h-4" />
+                                                                <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">Comments</span>
+                                                            </div>
+                                                            {isLoadingStats ? (
+                                                                <div className="h-5 w-12 bg-slate-100 dark:bg-gray-700 animate-pulse rounded" />
+                                                            ) : (
+                                                                <span className="text-sm font-black text-slate-800 dark:text-gray-100">
+                                                                    {videoStats?.comments ? parseInt(videoStats.comments).toLocaleString('pt-BR') : '---'}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Video History Section */}
                                     {videoLinksHistory.length > 0 && (
                                         <div className="mt-3 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-xl p-4 border border-indigo-100 dark:border-indigo-800/50">
@@ -697,7 +845,29 @@ export const UtmGenerator: React.FC = () => {
                                 <div className="md:col-span-12">
                                     <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                                         <div className="md:col-span-8">
-                                            <InputGroup label="Título do Vídeo" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: R$1 milhão por mês no TikTok Shop" icon={<Youtube className="w-4 h-4" />} />
+                                            <InputGroup
+                                                label="Título do Vídeo"
+                                                icon={<FileEdit className="w-4 h-4" />}
+                                                value={title}
+                                                onChange={(e) => setTitle(e.target.value)}
+                                                placeholder="Ex: R$1 milhão por mês no TikTok Shop"
+                                                rightLabel={currentIndex !== -1 && (
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm">
+                                                            VÍDEO {currentIndex + 1}
+                                                        </div>
+                                                        <div className="flex items-center bg-slate-100 dark:bg-gray-700 rounded-lg p-0.5 border border-slate-200 dark:border-gray-600">
+                                                            <button onClick={() => navigateVideo('prev')} disabled={currentIndex <= 0} className="p-1 hover:bg-white dark:hover:bg-gray-600 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                                                                <ChevronLeft className="w-3.5 h-3.5 text-slate-600 dark:text-gray-300" />
+                                                            </button>
+                                                            <div className="w-[1px] h-3 bg-slate-300 dark:bg-gray-600 mx-0.5" />
+                                                            <button onClick={() => navigateVideo('next')} disabled={currentIndex >= allVideos.length - 1} className="p-1 hover:bg-white dark:hover:bg-gray-600 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                                                                <ChevronRight className="w-3.5 h-3.5 text-slate-600 dark:text-gray-300" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            />
                                         </div>
                                         <div className="md:col-span-4">
                                             <InputGroup label="Data de Publicação" type="date" value={date} onChange={(e) => setDate(e.target.value)} icon={<Calendar className="w-4 h-4" />} />
@@ -757,114 +927,97 @@ export const UtmGenerator: React.FC = () => {
                                         <button onClick={() => { if (!baseUrl) return; setNewUrlAlias(''); setIsSavingUrl(true); setShowUrlDropdown(true); }} disabled={!baseUrl} className="px-3 py-2 bg-slate-100 dark:bg-gray-700 border border-slate-300 dark:border-gray-600 text-slate-600 dark:text-gray-300 rounded-lg hover:bg-slate-200 dark:hover:bg-gray-600 hover:text-indigo-600"><Save className="w-4 h-4" /></button>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="flex justify-end border-b border-slate-100 dark:border-gray-700 pb-6">
-                                <button onClick={handleAiGenerate} disabled={isGenerating || !title} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white shadow-md transition-all w-full sm:w-auto justify-center ${isGenerating || !title ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg'}`}>
-                                    {isGenerating ? <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" /> : <><Sparkles className="w-5 h-5" /> Gerar Slug & Link</>}
-                                </button>
-                            </div>
+                                <div className="md:col-span-12">
+                                    <div className="flex justify-end border-b border-slate-100 dark:border-gray-700 pb-6">
+                                        <button onClick={handleAiGenerate} disabled={isGenerating || !title} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white shadow-md transition-all w-full sm:w-auto justify-center ${isGenerating || !title ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg'}`}>
+                                            {isGenerating ? <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" /> : <><Sparkles className="w-5 h-5" /> Gerar Slug & Link</>}
+                                        </button>
+                                    </div>
 
-                            {error && (
-                                <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 p-3 rounded-lg flex items-start gap-2 text-sm border border-amber-200 dark:border-amber-800">
-                                    <AlertCircle className="w-5 h-5 shrink-0" /> <p>{error}</p>
-                                </div>
-                            )}
+                                    {error && (
+                                        <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 p-3 rounded-lg flex items-start gap-2 text-sm border border-amber-200 dark:border-amber-800 mt-4">
+                                            <AlertCircle className="w-5 h-5 shrink-0" /> <p>{error}</p>
+                                        </div>
+                                    )}
 
-                            <div className="bg-slate-50 dark:bg-gray-800/50 rounded-xl p-5 border border-slate-200 dark:border-gray-700 space-y-5 shadow-inner">
-                                <InputGroup label="Slug Gerado & UTM Content" value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="yt-..." className="bg-white" />
+                                    <div className="bg-slate-50 dark:bg-gray-800/50 rounded-xl p-5 border border-slate-200 dark:border-gray-700 space-y-5 shadow-inner mt-6">
+                                        <InputGroup label="Slug Gerado & UTM Content" value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="yt-..." className="bg-white" />
 
-                                <div className="pt-2">
-                                    <label className="text-sm font-bold text-slate-800 dark:text-gray-200 flex items-center gap-2 mb-2"><ExternalLink className="w-4 h-4" /> Link Final</label>
-                                    <div className="relative">
-                                        <textarea readOnly value={generatedLink} className="w-full h-24 px-4 py-3 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-900 rounded-lg text-slate-600 dark:text-gray-300 font-mono text-sm resize-none focus:ring-2 focus:ring-indigo-500" placeholder="O link final aparecerá aqui..." />
-                                        {generatedLink && (
-                                            <div className="absolute bottom-3 right-3 flex gap-2">
-                                                <button onClick={() => window.open(generatedLink, '_blank')} className="px-3 py-1.5 bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300 text-xs font-medium rounded-md border border-slate-300 dark:border-gray-600">Testar</button>
-                                                <button onClick={() => copyToClipboard(generatedLink, setCopySuccess)} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition-all shadow-sm ${copySuccess ? 'bg-green-50 border-green-200 text-green-700' : 'bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700'}`}>
-                                                    {copySuccess ? <><Check className="w-3 h-3" /> Copiado!</> : <><Copy className="w-3 h-3" /> Copiar</>}
-                                                </button>
+                                        <div className="pt-2">
+                                            <label className="text-sm font-bold text-slate-800 dark:text-gray-200 flex items-center gap-2 mb-2"><ExternalLink className="w-4 h-4" /> Link Final</label>
+                                            <div className="relative">
+                                                <textarea readOnly value={generatedLink} className="w-full h-24 px-4 py-3 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-900 rounded-lg text-slate-600 dark:text-gray-300 font-mono text-sm resize-none focus:ring-2 focus:ring-indigo-500" placeholder="O link final aparecerá aqui..." />
+                                                {generatedLink && (
+                                                    <div className="absolute bottom-3 right-3 flex gap-2">
+                                                        <button onClick={() => window.open(generatedLink, '_blank')} className="px-3 py-1.5 bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300 text-xs font-medium rounded-md border border-slate-300 dark:border-gray-600">Testar</button>
+                                                        <button onClick={() => copyToClipboard(generatedLink, setCopySuccess)} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition-all shadow-sm ${copySuccess ? 'bg-green-50 border-green-200 text-green-700' : 'bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700'}`}>
+                                                            {copySuccess ? <><Check className="w-3 h-3" /> Copiado!</> : <><Copy className="w-3 h-3" /> Copiar</>}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-gray-700">
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                    {!shortLink ? (
+                                                        <div className="flex items-center gap-3 w-full">
+                                                            <div className="flex-1 text-sm text-slate-600 dark:text-gray-400">Deseja uma versão curta? (escaladae.com/yt-...)</div>
+                                                            <button onClick={handleShortenLink} disabled={!generatedLink || isShortening} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white shadow-sm transition-all ${!generatedLink || isShortening ? 'bg-emerald-300 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
+                                                                {isShortening ? "Encurtando..." : <><Zap className="w-4 h-4" /> Encurtar Link</>}
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="w-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+                                                            <div className="flex items-center gap-2 overflow-hidden">
+                                                                <Zap className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                                                <span className="text-sm font-bold text-emerald-800 dark:text-emerald-300 truncate">{shortLink}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 shrink-0">
+                                                                <button onClick={() => window.open(shortLink, '_blank')} className="p-2 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 rounded-md"><ExternalLink className="w-4 h-4" /></button>
+                                                                <button onClick={() => copyToClipboard(shortLink, setShortCopySuccess)} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border ${shortCopySuccess ? 'bg-white text-emerald-700' : 'bg-emerald-600 text-white'}`}>
+                                                                    {shortCopySuccess ? <><Check className="w-3 h-3" /> Copiado</> : <><Copy className="w-3 h-3" /> Copiar</>}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-4 mt-2 flex justify-end">
+                                    </div>
+
+                                    {/* Video Description Section */}
+                                    <div className="mt-8 border-t border-slate-100 dark:border-gray-700 pt-6">
+                                        <button onClick={() => setShowDescription(!showDescription)} className="w-full flex items-center justify-between p-4 bg-slate-50 dark:bg-gray-800/50 rounded-xl border border-slate-200 dark:border-gray-700 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors">
+                                            <div className="flex items-center gap-3">
+                                                <MessageSquareText className="w-5 h-5 text-indigo-600" />
+                                                <span className="font-bold text-slate-800 dark:text-gray-200">DESCRIÇÃO DO VÍDEO</span>
+                                            </div>
+                                            {showDescription ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+                                        </button>
+
+                                        {showDescription && (
+                                            <div className="mt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                                                <div className="flex justify-between items-center">
+                                                    <p className="text-xs text-slate-500 dark:text-gray-400">Edite e salve a descrição que será atualizada na base de dados.</p>
+                                                    <button onClick={loadDescriptionFromYoutube} disabled={!videoId || isLoadingFromYoutube} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-lg border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 transition-colors disabled:opacity-50">
+                                                        {isLoadingFromYoutube ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                                        CARREGAR DESCRIÇÃO
+                                                    </button>
+                                                </div>
+                                                <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="A descrição do vídeo aparecerá aqui..." className="w-full h-80 px-4 py-3 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl text-slate-600 dark:text-gray-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none" />
+                                                <div className="flex justify-end">
+                                                    <button onClick={saveDescriptionToDatabase} disabled={!videoId || isSavingDescription} className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-all shadow-md disabled:opacity-50">
+                                                        {isSavingDescription ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                                        SALVAR DESCRIÇÃO
+                                                    </button>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
-                                    <div className="mt-4 pt-4 border-t border-slate-200 dark:border-gray-700">
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                            {!shortLink ? (
-                                                <div className="flex items-center gap-3 w-full">
-                                                    <div className="flex-1 text-sm text-slate-600 dark:text-gray-400">Deseja uma versão curta? (escaladae.com/yt-...)</div>
-                                                    <button onClick={handleShortenLink} disabled={!generatedLink || isShortening} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white shadow-sm transition-all ${!generatedLink || isShortening ? 'bg-emerald-300 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
-                                                        {isShortening ? "Encurtando..." : <><Zap className="w-4 h-4" /> Encurtar Link</>}
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <div className="w-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3 flex flex-col sm:flex-row items-center justify-between gap-3">
-                                                    <div className="flex items-center gap-2 overflow-hidden">
-                                                        <Zap className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                                        <span className="text-sm font-bold text-emerald-800 dark:text-emerald-300 truncate">{shortLink}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 shrink-0">
-                                                        <button onClick={() => window.open(shortLink, '_blank')} className="p-2 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 rounded-md"><ExternalLink className="w-4 h-4" /></button>
-                                                        <button onClick={() => copyToClipboard(shortLink, setShortCopySuccess)} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border ${shortCopySuccess ? 'bg-white text-emerald-700' : 'bg-emerald-600 text-white'}`}>
-                                                            {shortCopySuccess ? <><Check className="w-3 h-3" /> Copiado</> : <><Copy className="w-3 h-3" /> Copiar</>}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
                                 </div>
-                            </div>
-
-                            <div className="pt-4 mt-2 flex justify-end">
-                                <button onClick={() => saveSession('draft')} disabled={!title} className="bg-slate-800 hover:bg-slate-900 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg flex items-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed">
-                                    <FolderHeart className="w-5 h-5 text-amber-400" /> SALVAR RASCUNHO
-                                </button>
-                            </div>
-
-                            {/* Video Description Section */}
-                            <div className="mt-8 border-t border-slate-100 dark:border-gray-700 pt-6">
-                                <button
-                                    onClick={() => setShowDescription(!showDescription)}
-                                    className="w-full flex items-center justify-between p-4 bg-slate-50 dark:bg-gray-800/50 rounded-xl border border-slate-200 dark:border-gray-700 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <MessageSquareText className="w-5 h-5 text-indigo-600" />
-                                        <span className="font-bold text-slate-800 dark:text-gray-200">DESCRIÇÃO DO VÍDEO</span>
-                                    </div>
-                                    {showDescription ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
-                                </button>
-
-                                {showDescription && (
-                                    <div className="mt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
-                                        <div className="flex justify-between items-center">
-                                            <p className="text-xs text-slate-500 dark:text-gray-400">Edite e salve a descrição que será atualizada na base de dados.</p>
-                                            <button
-                                                onClick={loadDescriptionFromYoutube}
-                                                disabled={!videoId || isLoadingFromYoutube}
-                                                className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-lg border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 transition-colors disabled:opacity-50"
-                                            >
-                                                {isLoadingFromYoutube ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                                                CARREGAR DESCRIÇÃO
-                                            </button>
-                                        </div>
-                                        <textarea
-                                            value={description}
-                                            onChange={(e) => setDescription(e.target.value)}
-                                            placeholder="A descrição do vídeo aparecerá aqui..."
-                                            className="w-full h-80 px-4 py-3 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl text-slate-600 dark:text-gray-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
-                                        />
-                                        <div className="flex justify-end">
-                                            <button
-                                                onClick={saveDescriptionToDatabase}
-                                                disabled={!videoId || isSavingDescription}
-                                                className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-all shadow-md disabled:opacity-50"
-                                            >
-                                                {isSavingDescription ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                                SALVAR DESCRIÇÃO
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         </div>
                     </div>
