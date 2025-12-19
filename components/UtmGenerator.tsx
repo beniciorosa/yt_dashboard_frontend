@@ -113,6 +113,7 @@ export const UtmGenerator: React.FC = () => {
     const [isSavingDescription, setIsSavingDescription] = useState(false);
     const [videoLinksHistory, setVideoLinksHistory] = useState<any[]>([]);
     const [isLoadingVideoHistory, setIsLoadingVideoHistory] = useState(false);
+    const [videoCategoryId, setVideoCategoryId] = useState('27');
 
     const [savedDestinations, setSavedDestinations] = useState<SavedDestination[]>([]);
     const [sessions, setSessions] = useState<SavedSession[]>([]);
@@ -493,6 +494,9 @@ export const UtmGenerator: React.FC = () => {
             if (data.items && data.items.length > 0) {
                 const fullDesc = data.items[0].snippet.description;
                 setDescription(fullDesc);
+                if (data.items[0].snippet.categoryId) {
+                    setVideoCategoryId(data.items[0].snippet.categoryId);
+                }
             }
         } catch (e) {
             console.error("Erro ao carregar descrição:", e);
@@ -523,18 +527,23 @@ export const UtmGenerator: React.FC = () => {
                 return;
             }
 
-            const res = await fetch(`${API_BASE_URL}/api/youtube/proxy?endpoint=videos&part=snippet`, {
-                method: 'PUT',
+            const res = await fetch(`${API_BASE_URL}/api/youtube/proxy-action`, {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    id: videoId,
-                    snippet: {
-                        title: title, // YouTube requires title in snippet for update
-                        categoryId: "27", // Default to Education or fetch current
-                        description: description
+                    token: token,
+                    method: 'PUT',
+                    endpoint: 'videos',
+                    params: { part: 'snippet' },
+                    data: {
+                        id: videoId,
+                        snippet: {
+                            title: title, // YouTube requires title in snippet for update
+                            categoryId: videoCategoryId,
+                            description: description
+                        }
                     }
                 })
             });
