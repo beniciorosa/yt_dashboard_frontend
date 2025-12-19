@@ -314,6 +314,9 @@ export const UtmGenerator: React.FC = () => {
 
         setShowVideoDropdown(false);
         setShowDescription(true);
+        setSlug('');
+        setShortLink('');
+        setGeneratedLink('');
         fetchVideoLinksHistory(video.video_id);
         fetchVideoStats(video.video_id);
 
@@ -757,7 +760,7 @@ export const UtmGenerator: React.FC = () => {
                                                 </div>
                                                 <div className="flex-1 p-5 space-y-4">
                                                     <div>
-                                                        <h3 className="text-lg font-bold text-slate-800 dark:text-gray-100 line-clamp-2 leading-tight mb-2">
+                                                        <h3 className="text-lg font-bold text-slate-800 dark:text-gray-100 line-clamp-2 leading-tight mb-2 min-h-[3.25rem]">
                                                             {title}
                                                         </h3>
                                                         <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-gray-400">
