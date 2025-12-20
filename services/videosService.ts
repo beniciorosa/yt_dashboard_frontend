@@ -84,24 +84,25 @@ const fetchAnalyticsForBatch = async (videoIds: string[], token: string) => {
     if (videoIds.length === 0) return [];
 
     const idsStr = videoIds.join(',');
-    // Metrics: views, estimatedMinutesWatched, averageViewDuration, subscribersGained, impressions, annotationClickThroughRate
+    // Metrics: views, estimatedMinutesWatched, averageViewDuration, subscribersGained, cardImpressions, cardClickRate
     // Dimensions: video
     // Filter: video==id1,id2...
 
-    // We try to fetch impressions/CTR. If that fails (some channels don't have access to these in this view without traffic source), we retry without.
-    const metrics = 'views,estimatedMinutesWatched,averageViewDuration,subscribersGained,impressions,annotationClickThroughRate';
-    const baseUrl = `${ANALYTICS_URL}?ids=channel==MINE&startDate=2000-01-01&endDate=${new Date().toISOString().split('T')[0]}`;
+    // We try to fetch card metrics. If that fails, we retry without.
+    const metrics = 'views,estimatedMinutesWatched,averageViewDuration,subscribersGained,cardImpressions,cardClickRate';
+    const baseUrl = `${ANALYTICS_URL}?ids=channel==MINE&startDate=2005-01-01&endDate=${new Date().toISOString().split('T')[0]}`;
     const url = `${baseUrl}&metrics=${metrics}&dimensions=video&filters=video==${idsStr}`;
 
     let res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
 
     if (!res.ok) {
-        // Fallback: simpler metrics
+        // Fallback: core basic metrics
         const simpleMetrics = 'views,estimatedMinutesWatched,averageViewDuration,subscribersGained';
         const simpleUrl = `${baseUrl}&metrics=${simpleMetrics}&dimensions=video&filters=video==${idsStr}`;
         res = await fetch(simpleUrl, { headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) {
-            console.warn("Failed to fetch analytics for batch:", idsStr);
+            const errorText = await res.text();
+            console.warn("Failed to fetch analytics for batch:", idsStr, errorText);
             return [];
         }
     }
