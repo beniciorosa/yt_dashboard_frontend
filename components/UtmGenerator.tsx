@@ -300,18 +300,26 @@ export const UtmGenerator: React.FC = () => {
     const fetchVideoStats = async (vidId: string) => {
         setIsLoadingStats(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/api/youtube/proxy?endpoint=videos&part=statistics&id=${vidId}`);
-            const data = await res.json();
-            if (data.items && data.items.length > 0) {
-                const stats = data.items[0].statistics;
+            // OPTIMIZATION: Fetch stats from Supabase instead of YouTube API Proxy
+            // This table is already synced by the backend, saving 1 quota unit per selection.
+            const { data, error } = await supabase
+                .from('yt_myvideos')
+                .select('view_count, like_count, comment_count')
+                .eq('video_id', vidId)
+                .single();
+
+            if (data) {
                 setVideoStats({
-                    views: stats.viewCount,
-                    likes: stats.likeCount,
-                    comments: stats.commentCount
+                    views: data.view_count?.toString() || '0',
+                    likes: data.like_count?.toString() || '0',
+                    comments: data.comment_count?.toString() || '0'
                 });
+            } else {
+                if (error) console.error("Erro ao buscar no Supabase:", error);
+                setVideoStats(null);
             }
         } catch (e) {
-            console.error("Erro ao carregar estatísticas:", e);
+            console.error("Erro ao carregar estatísticas do banco:", e);
             setVideoStats(null);
         } finally {
             setIsLoadingStats(false);
