@@ -130,7 +130,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                                         queryParams: {
                                             access_type: 'offline',
                                             prompt: 'consent',
-                                            scope: 'https://www.googleapis.com/auth/yt-analytics.readonly https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics-monetary.readonly https://www.googleapis.com/auth/youtubepartner https://www.googleapis.com/auth/youtube.force-ssl'
+                                            scope: 'email profile https://www.googleapis.com/auth/yt-analytics.readonly https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics-monetary.readonly https://www.googleapis.com/auth/youtubepartner https://www.googleapis.com/auth/youtube.force-ssl'
                                         }
                                     }
                                 });
