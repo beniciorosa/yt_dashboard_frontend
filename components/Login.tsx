@@ -110,6 +110,35 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                                 )}
                             </button>
                         </form>
+
+                        <div className="relative my-8">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-gray-200 dark:border-gray-800"></div>
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                                <span className="bg-white dark:bg-gray-900 px-4 text-gray-500 dark:text-gray-400">Ou continuar com</span>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={async () => {
+                                setLoading(true);
+                                const { error } = await supabase.auth.signInWithOAuth({
+                                    provider: 'google',
+                                    options: {
+                                        redirectTo: window.location.origin
+                                    }
+                                });
+                                if (error) {
+                                    setError(error.message);
+                                    setLoading(false);
+                                }
+                            }}
+                            className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-750 transition-all font-medium text-gray-700 dark:text-gray-200 active:scale-[0.98]"
+                        >
+                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                            Continuar com Google
+                        </button>
                     </div>
 
                     <div className="bg-gray-50/50 dark:bg-gray-800/30 p-6 border-t border-gray-100 dark:border-gray-800 text-center">
