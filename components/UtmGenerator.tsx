@@ -612,6 +612,21 @@ export const UtmGenerator: React.FC = () => {
         if (!videoId) return;
         setIsLoadingFromYoutube(true);
         try {
+            // OPTIMIZATION: Try Supabase first
+            const { data: dbData } = await supabase
+                .from('yt_myvideos')
+                .select('description, category_id')
+                .eq('video_id', videoId)
+                .single();
+
+            if (dbData?.description) {
+                setDescription(dbData.description);
+                if (dbData.category_id) setVideoCategoryId(dbData.category_id);
+                setIsLoadingFromYoutube(false);
+                return;
+            }
+
+            // Fallback to YouTube API if not in DB
             const res = await fetch(`${API_BASE_URL}/api/youtube/proxy?endpoint=videos&part=snippet&id=${videoId}`);
             const data = await res.json();
             if (data.items && data.items.length > 0) {
@@ -1049,7 +1064,7 @@ export const UtmGenerator: React.FC = () => {
                                                     <p className="text-xs text-slate-500 dark:text-gray-400">Edite e salve a descrição que será atualizada na base de dados.</p>
                                                     <button onClick={loadDescriptionFromYoutube} disabled={!videoId || isLoadingFromYoutube} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-lg border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 transition-colors disabled:opacity-50">
                                                         {isLoadingFromYoutube ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                                                        CARREGAR DESCRIÇÃO
+                                                        SINCRONIZAR DADOS
                                                     </button>
                                                 </div>
                                                 <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="A descrição do vídeo aparecerá aqui..." className="w-full h-80 px-4 py-3 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl text-slate-600 dark:text-gray-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none" />
