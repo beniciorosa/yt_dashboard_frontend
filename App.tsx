@@ -10,7 +10,7 @@ import { PromotionsDashboard } from './components/Promotions/PromotionsDashboard
 import { SalesMetricsDashboard } from './components/SalesMetrics/SalesMetricsDashboard';
 import { UserManagement } from './components/Admin/UserManagement';
 import { Login } from './components/Login';
-import { handleAuthCallback, initiateLogin, logout, isAuthenticated, getAccessToken } from './services/authService';
+import { handleAuthCallback, initiateLogin, logout, isAuthenticated, getAccessToken, saveSession } from './services/authService';
 import { supabase } from './services/supabaseClient';
 import { Loader2 } from 'lucide-react';
 
@@ -56,6 +56,16 @@ const App: React.FC = () => {
       setSession(session);
       if (session?.user) {
         fetchUserRole(session.user.id);
+
+        // SYNC: If we have a provider token (Google), sync it with our YouTube auth system
+        if (session.provider_token) {
+          saveSession({
+            access_token: session.provider_token,
+            refresh_token: session.provider_refresh_token,
+            expires_in: 3599 // Default
+          });
+          setIsLoggedIn(true);
+        }
       }
       setIsAppAuthLoading(false);
     };
@@ -66,6 +76,15 @@ const App: React.FC = () => {
       setSession(session);
       if (session?.user) {
         fetchUserRole(session.user.id);
+
+        if (session.provider_token) {
+          saveSession({
+            access_token: session.provider_token,
+            refresh_token: session.provider_refresh_token,
+            expires_in: 3599
+          });
+          setIsLoggedIn(true);
+        }
       }
     });
 

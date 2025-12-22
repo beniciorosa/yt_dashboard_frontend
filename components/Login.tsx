@@ -126,7 +126,12 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                                 const { error } = await supabase.auth.signInWithOAuth({
                                     provider: 'google',
                                     options: {
-                                        redirectTo: window.location.origin
+                                        redirectTo: window.location.origin,
+                                        queryParams: {
+                                            access_type: 'offline',
+                                            prompt: 'consent',
+                                            scope: 'https://www.googleapis.com/auth/yt-analytics.readonly https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics-monetary.readonly https://www.googleapis.com/auth/youtubepartner https://www.googleapis.com/auth/youtube.force-ssl'
+                                        }
                                     }
                                 });
                                 if (error) {

@@ -59,7 +59,7 @@ export const handleAuthCallback = async (code: string): Promise<boolean> => {
   }
 };
 
-const saveSession = (data: any) => {
+export const saveSession = (data: any) => {
   // Ensure numeric calculation
   const expiresIn = Number(data.expires_in) || 3599;
   // Buffer of 60 seconds
