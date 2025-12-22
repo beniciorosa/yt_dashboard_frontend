@@ -691,6 +691,14 @@ export const UtmGenerator: React.FC = () => {
                 throw new Error(errData.message || "Falha ao atualizar no YouTube");
             }
 
+            // 3. Sincronização LOCAL: Atualiza a memória do app para não precisar clicar em Sincronizar
+            setAllVideos(prev => prev.map(v =>
+                v.video_id === videoId ? { ...v, description: description } : v
+            ));
+            setVideoResults(prev => prev.map(v =>
+                v.video_id === videoId ? { ...v, description: description } : v
+            ));
+
             alert("Descrição salva com sucesso no banco e no YouTube!");
         } catch (e: any) {
             console.error("Erro ao salvar descrição:", e);
