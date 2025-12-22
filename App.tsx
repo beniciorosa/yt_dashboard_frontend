@@ -134,9 +134,16 @@ const App: React.FC = () => {
   const handleLogout = async () => {
     setIsLoggedIn(false);
     setIsSettingsOpen(false);
-    setSession(null); // Explicitly clear session state
+    setSession(null);
     await supabase.auth.signOut();
-    logout(); // This clears YouTube tokens and redirects to '/'
+
+    // Clear YouTube tokens
+    localStorage.removeItem('yt_access_token');
+    localStorage.removeItem('yt_refresh_token');
+    localStorage.removeItem('yt_token_expiry');
+
+    // Redirect to root without hash or query params
+    window.location.replace(window.location.origin);
   };
 
   if (isAppAuthLoading) {
