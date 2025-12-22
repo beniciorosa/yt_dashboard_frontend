@@ -131,11 +131,11 @@ const App: React.FC = () => {
   }, [session]);
 
   const handleLogin = () => initiateLogin();
-  const handleLogout = () => {
-    logout();
-    supabase.auth.signOut();
+  const handleLogout = async () => {
     setIsLoggedIn(false);
     setIsSettingsOpen(false);
+    await supabase.auth.signOut();
+    logout(); // Limpa tokens do YouTube também
   };
 
   if (isAppAuthLoading) {
@@ -159,6 +159,7 @@ const App: React.FC = () => {
         isCollapsed={isSidebarCollapsed}
         toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onLogout={handleLogout}
         userRole={userRole}
       />
 

@@ -3,7 +3,7 @@ import React from 'react';
 import {
   LayoutDashboard, LineChart, ChevronLeft, ChevronRight,
   BarChart3, Settings, Type, Link, Wrench, MessageSquare,
-  Megaphone, DollarSign, Users
+  Megaphone, DollarSign, Users, LogOut
 } from 'lucide-react';
 
 interface Props {
@@ -11,8 +11,7 @@ interface Props {
   onNavigate: (module: 'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments' | 'promotions' | 'sales-metrics' | 'users') => void;
   isCollapsed: boolean;
   toggleCollapse: () => void;
-  onOpenSettings: () => void;
-  userRole?: string;
+  onLogout: () => void;
 }
 
 export const Sidebar: React.FC<Props> = ({
@@ -21,6 +20,7 @@ export const Sidebar: React.FC<Props> = ({
   isCollapsed,
   toggleCollapse,
   onOpenSettings,
+  onLogout,
   userRole
 }) => {
   return (
@@ -193,6 +193,19 @@ export const Sidebar: React.FC<Props> = ({
           {!isCollapsed && (
             <span className="ml-3 font-medium whitespace-nowrap">
               Configurações
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center p-3 rounded-lg transition-colors text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+          title="Sair"
+        >
+          <LogOut size={20} className="shrink-0" />
+          {!isCollapsed && (
+            <span className="ml-3 font-medium whitespace-nowrap">
+              Sair
             </span>
           )}
         </button>
