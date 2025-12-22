@@ -1,13 +1,18 @@
 // --- START OF FILE components/Sidebar.tsx ---
 import React from 'react';
-import { LayoutDashboard, LineChart, ChevronLeft, ChevronRight, BarChart3, Settings, Type, Link, Wrench, MessageSquare, Megaphone, DollarSign } from 'lucide-react';
+import {
+  LayoutDashboard, LineChart, ChevronLeft, ChevronRight,
+  BarChart3, Settings, Type, Link, Wrench, MessageSquare,
+  Megaphone, DollarSign, Users
+} from 'lucide-react';
 
 interface Props {
-  activeModule: 'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments' | 'promotions' | 'sales-metrics';
-  onNavigate: (module: 'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments' | 'promotions' | 'sales-metrics') => void;
+  activeModule: 'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments' | 'promotions' | 'sales-metrics' | 'users';
+  onNavigate: (module: 'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments' | 'promotions' | 'sales-metrics' | 'users') => void;
   isCollapsed: boolean;
   toggleCollapse: () => void;
   onOpenSettings: () => void;
+  userRole?: string;
 }
 
 export const Sidebar: React.FC<Props> = ({
@@ -15,7 +20,8 @@ export const Sidebar: React.FC<Props> = ({
   onNavigate,
   isCollapsed,
   toggleCollapse,
-  onOpenSettings
+  onOpenSettings,
+  userRole
 }) => {
   return (
     <div
@@ -123,9 +129,6 @@ export const Sidebar: React.FC<Props> = ({
             <div className="h-px bg-gray-200 dark:bg-gray-700 my-4 mx-2"></div>
           )}
 
-
-
-
           <button
             onClick={() => onNavigate('description-gen')}
             className={`w-full flex items-center p-3 rounded-lg transition-colors mb-1 ${activeModule === 'description-gen'
@@ -161,13 +164,26 @@ export const Sidebar: React.FC<Props> = ({
             <Link size={20} className="shrink-0" />
             {!isCollapsed && <span className="ml-3 font-medium whitespace-nowrap">Gerador de UTM</span>}
           </button>
+
+          {userRole === 'admin' && (
+            <button
+              onClick={() => onNavigate('users')}
+              className={`w-full flex items-center p-3 rounded-lg transition-colors mt-1 ${activeModule === 'users'
+                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
+                }`}
+              title="Gestão de Usuários"
+            >
+              <Users size={20} className="shrink-0" />
+              {!isCollapsed && <span className="ml-3 font-medium whitespace-nowrap">Usuários</span>}
+            </button>
+          )}
         </div>
 
       </nav>
 
-      {/* Settings & Collapse Footer */}
+      {/* Settings & Logout Footer */}
       <div className="p-3 border-t border-gray-100 dark:border-gray-700 flex flex-col gap-2">
-        {/* Settings Button */}
         <button
           onClick={onOpenSettings}
           className="w-full flex items-center p-3 rounded-lg transition-colors text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
@@ -180,8 +196,6 @@ export const Sidebar: React.FC<Props> = ({
             </span>
           )}
         </button>
-
-        {/* Collapse Toggle Removed from Footer */}
       </div>
     </div>
   );

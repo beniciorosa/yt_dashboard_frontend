@@ -1,4 +1,3 @@
-// --- START OF FILE App.tsx ---
 import React, { useState, useEffect, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { CompetitorsModule } from './components/CompetitorsModule';
@@ -9,14 +8,17 @@ import { UtmGenerator } from './components/UtmGenerator';
 import { CommentsDashboard } from './components/Comments/CommentsDashboard';
 import { PromotionsDashboard } from './components/Promotions/PromotionsDashboard';
 import { SalesMetricsDashboard } from './components/SalesMetrics/SalesMetricsDashboard';
+import { UserManagement } from './components/Admin/UserManagement';
+import { Login } from './components/Login';
 import { handleAuthCallback, initiateLogin, logout, isAuthenticated, getAccessToken } from './services/authService';
-import { Loader2, Wrench } from 'lucide-react';
+import { supabase } from './services/supabaseClient';
+import { Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
-  // Updated state type to include new tool modules
-  const [activeModule, setActiveModule] = useState<'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments' | 'promotions' | 'sales-metrics'>('competitors');
+  const [activeModule, setActiveModule] = useState<'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments' | 'promotions' | 'sales-metrics' | 'users'>('competitors');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string>('user');
 
   // Theme State
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -26,11 +28,14 @@ const App: React.FC = () => {
     return 'light';
   });
 
+  // App Auth State
+  const [session, setSession] = useState<any>(null);
+  const [isAppAuthLoading, setIsAppAuthLoading] = useState(true);
+
   // Google Auth State Management
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAuthProcessing, setIsAuthProcessing] = useState(true);
+  const [isAuthProcessing, setIsAuthProcessing] = useState(false);
 
-  // Ref to prevent double execution in React StrictMode
   const authCheckRan = useRef(false);
 
   // Apply Theme
@@ -44,83 +49,101 @@ const App: React.FC = () => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // Check Google Auth
+  // Check App Session
   useEffect(() => {
-    if (authCheckRan.current) return;
+    const checkAppAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      if (session?.user) {
+        fetchUserRole(session.user.id);
+      }
+      setIsAppAuthLoading(false);
+    };
+
+    checkAppAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session?.user) {
+        fetchUserRole(session.user.id);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchUserRole = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+      if (data) setUserRole(data.role);
+    } catch (e) { console.error(e); }
+  };
+
+  // Check Google Auth (only if app session exists)
+  useEffect(() => {
+    if (!session || authCheckRan.current) return;
     authCheckRan.current = true;
 
-    const checkAuth = async () => {
+    const checkGoogleAuth = async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
-
-      // 1. Check if we already have a potentially valid session
-      // This check avoids re-exchanging a stale code if a session exists
       const existingToken = await getAccessToken();
 
       if (code) {
-        // Remove code from URL immediately to prevent reuse attempts visual clutter
         window.history.replaceState({}, document.title, window.location.pathname);
-
-        // If we already have a valid token (not expired), skip the code exchange
-        // This happens if the user reloads the page before the URL is cleaned or double-fired
         if (existingToken) {
-          console.log("Valid session found, ignoring auth code.");
           setIsLoggedIn(true);
-          setActiveModule('competitors');
-          setIsAuthProcessing(false);
-          return;
-        }
-
-        const success = await handleAuthCallback(code);
-        if (success) {
-          setIsLoggedIn(true);
-          setActiveModule('competitors');
         } else {
-          alert('Falha na autenticação com Google. Tente novamente.');
+          setIsAuthProcessing(true);
+          const success = await handleAuthCallback(code);
+          setIsLoggedIn(success);
+          setIsAuthProcessing(false);
         }
       } else {
         setIsLoggedIn(isAuthenticated());
       }
-      setIsAuthProcessing(false);
     };
 
-    checkAuth();
-  }, []);
+    checkGoogleAuth();
+  }, [session]);
 
-  const handleLogin = () => {
-    initiateLogin();
-  };
-
+  const handleLogin = () => initiateLogin();
   const handleLogout = () => {
     logout();
+    supabase.auth.signOut();
     setIsLoggedIn(false);
     setIsSettingsOpen(false);
   };
 
-  if (isAuthProcessing) {
+  if (isAppAuthLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-950 text-white">
         <Loader2 className="animate-spin text-blue-600 mb-4" size={40} />
-        <h2 className="text-gray-600 dark:text-gray-300 font-medium">Carregando...</h2>
+        <h2 className="text-gray-400 font-medium">Iniciando aplicação...</h2>
       </div>
     );
   }
 
+  if (!session) {
+    return <Login onLoginSuccess={() => window.location.reload()} />;
+  }
+
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-200">
-      {/* Sidebar */}
       <Sidebar
         activeModule={activeModule}
         onNavigate={setActiveModule}
         isCollapsed={isSidebarCollapsed}
         toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        userRole={userRole}
       />
 
-      {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-
-        {/* Top Bar */}
         <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 sticky top-0 z-20 transition-colors duration-200">
           <h2 className="text-lg font-semibold text-gray-700 dark:text-white">
             {activeModule === 'dashboard' && 'Dashboard do Canal'}
@@ -130,39 +153,22 @@ const App: React.FC = () => {
             {activeModule === 'comments' && 'Gestão de Comentários'}
             {activeModule === 'promotions' && 'Minhas Promoções'}
             {activeModule === 'sales-metrics' && 'Sales Metrics'}
+            {activeModule === 'users' && 'Gestão de Usuários'}
           </h2>
           <div className="flex items-center gap-4">
-            <span className="text-xs text-gray-400 hidden md:inline">v1.8.2</span>
+            <span className="text-xs text-gray-400 hidden md:inline">v1.9.0 (Protected)</span>
           </div>
         </header>
 
-        {/* Module Content */}
         <main className="p-6 lg:p-8 flex-1 overflow-y-auto">
           {activeModule === 'competitors' && <CompetitorsModule />}
-
-          {activeModule === 'dashboard' && (
-            <ChannelDashboard isLoggedIn={isLoggedIn} />
-          )}
-
-          {activeModule === 'description-gen' && (
-            <DescriptionGenerator />
-          )}
-
-          {activeModule === 'utm-gen' && (
-            <UtmGenerator />
-          )}
-
-          {activeModule === 'comments' && (
-            <CommentsDashboard />
-          )}
-
-          {activeModule === 'promotions' && (
-            <PromotionsDashboard />
-          )}
-
-          {activeModule === 'sales-metrics' && (
-            <SalesMetricsDashboard />
-          )}
+          {activeModule === 'dashboard' && <ChannelDashboard isLoggedIn={isLoggedIn} />}
+          {activeModule === 'description-gen' && <DescriptionGenerator />}
+          {activeModule === 'utm-gen' && <UtmGenerator />}
+          {activeModule === 'comments' && <CommentsDashboard />}
+          {activeModule === 'promotions' && <PromotionsDashboard />}
+          {activeModule === 'sales-metrics' && <SalesMetricsDashboard />}
+          {activeModule === 'users' && <UserManagement />}
         </main>
       </div>
 
