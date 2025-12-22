@@ -30,8 +30,8 @@ export const Sidebar: React.FC<Props> = ({
     >
       {/* Header */}
       <div className="h-16 flex items-center justify-center border-b border-gray-100 dark:border-gray-700 relative">
-        <div className="bg-red-600 text-white p-2 rounded-lg">
-          <BarChart3 size={24} />
+        <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-2 rounded-lg shadow-lg shadow-blue-500/20">
+          <Youtube size={24} className="text-white" />
         </div>
         {!isCollapsed && (
           <span className="ml-3 font-bold text-gray-900 dark:text-white text-lg tracking-tight whitespace-nowrap overflow-hidden">
