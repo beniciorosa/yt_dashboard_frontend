@@ -129,9 +129,12 @@ export const DescriptionGenerator: React.FC = () => {
   // Step 1: Transcrever Áudio com Whisper (OpenAI)
   const uploadToSupabase = async (file: File): Promise<string> => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id || 'public';
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const filePath = `${userId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('temp-uploads')

@@ -48,31 +48,19 @@ export interface Preset {
     data: any; // Payload to load back into forms
 }
 
-// Helper: Get or Create Anonymous User ID
-const getUserId = (): string => {
-    const STORAGE_KEY = 'youtube_desc_app_user_id';
-    let userId = localStorage.getItem(STORAGE_KEY);
-
-    if (!userId) {
-        // Generate simple UUID v4-like string
-        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-            userId = crypto.randomUUID();
-        } else {
-            userId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
-        }
-        localStorage.setItem(STORAGE_KEY, userId);
-    }
-    return userId;
+// Helper: Get Authenticated User ID
+const getUserId = async (): Promise<string | null> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user ? user.id : null;
 };
 
 // --- PROJECTS ---
 
 export const saveProject = async (videoTitle: string, finalDescription: string): Promise<ProjectRow | null> => {
     try {
-        const userId = getUserId();
+        const userId = await getUserId();
+        if (!userId) throw new Error("Usuário não autenticado");
+
         const { data, error } = await supabase
             .from('projects')
             .insert({
@@ -128,7 +116,9 @@ export const deleteProject = async (id: string): Promise<boolean> => {
 
 export const saveCtaPreset = async (presetName: string, text: string, url: string, position: string): Promise<boolean> => {
     try {
-        const userId = getUserId();
+        const userId = await getUserId();
+        if (!userId) throw new Error("Usuário não autenticado");
+
         const { error } = await supabase
             .from('cta_presets')
             .insert({
@@ -215,7 +205,9 @@ export const saveSocialPreset = async (
     socials: SocialItem[]
 ): Promise<boolean> => {
     try {
-        const userId = getUserId();
+        const userId = await getUserId();
+        if (!userId) throw new Error("Usuário não autenticado");
+
         const getUrl = (network: string) => socials.find(s => s.network === network && s.enabled)?.url || null;
 
         const { error } = await supabase
@@ -313,7 +305,9 @@ export const deleteSocialPreset = async (id: string): Promise<boolean> => {
 
 export const saveCustomLinksPreset = async (presetName: string, links: LinkItem[]): Promise<boolean> => {
     try {
-        const userId = getUserId();
+        const userId = await getUserId();
+        if (!userId) throw new Error("Usuário não autenticado");
+
         // Prepare rows with user_id
         const rows = links.map((link, index) => ({
             user_id: userId,
@@ -338,7 +332,9 @@ export const saveCustomLinksPreset = async (presetName: string, links: LinkItem[
 
 export const updateCustomLinksPreset = async (presetName: string, links: LinkItem[]): Promise<boolean> => {
     try {
-        const userId = getUserId();
+        const userId = await getUserId();
+        if (!userId) throw new Error("Usuário não autenticado");
+
         // Strategy: Delete old rows by preset_name and insert new ones
 
         // 1. Delete
