@@ -135,14 +135,21 @@ const App: React.FC = () => {
     setIsLoggedIn(false);
     setIsSettingsOpen(false);
     setSession(null);
-    await supabase.auth.signOut();
 
-    // Clear YouTube tokens
-    localStorage.removeItem('yt_access_token');
-    localStorage.removeItem('yt_refresh_token');
-    localStorage.removeItem('yt_token_expiry');
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error("Erro ao deslogar:", e);
+    }
 
-    // Redirect to root without hash or query params
+    // Limpeza CIRÚRGICA: Remove apenas o que é login, mantém o resto (como VERSUS)
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('sb-') || key.startsWith('yt_')) {
+        localStorage.removeItem(key);
+      }
+    });
+
+    // Redirect limpando a URL de qualquer rastro de hash ou code
     window.location.replace(window.location.origin);
   };
 
