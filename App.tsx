@@ -134,8 +134,9 @@ const App: React.FC = () => {
   const handleLogout = async () => {
     setIsLoggedIn(false);
     setIsSettingsOpen(false);
+    setSession(null); // Explicitly clear session state
     await supabase.auth.signOut();
-    logout(); // Limpa tokens do YouTube também
+    logout(); // This clears YouTube tokens and redirects to '/'
   };
 
   if (isAppAuthLoading) {
