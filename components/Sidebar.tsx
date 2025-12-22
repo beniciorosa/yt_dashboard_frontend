@@ -3,7 +3,7 @@ import React from 'react';
 import {
   LayoutDashboard, LineChart, ChevronLeft, ChevronRight,
   BarChart3, Settings, Type, Link, Wrench, MessageSquare,
-  Megaphone, DollarSign, Users, LogOut
+  Megaphone, DollarSign, Users, LogOut, Youtube
 } from 'lucide-react';
 
 interface Props {
