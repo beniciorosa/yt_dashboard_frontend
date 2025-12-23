@@ -1,4 +1,4 @@
-import { Competitor, StatSnapshot } from '../types';
+﻿import { Competitor, StatSnapshot } from '../types';
 import { getAccessToken } from './authService';
 
 // --- CONFIGURAÇÃO DA API ---
@@ -28,10 +28,13 @@ export interface VideoData {
     estimatedRevenue?: number;
     privacyStatus?: string;
     description?: string;
+    duration?: string;
+    channelId?: string;
 }
 
 const ANALYTICS_URL = 'https://youtubeanalytics.googleapis.com/v2/reports';
-const API_URL = (import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080' : 'https://yt-dashboard-backend.vercel.app')) + '/api/youtube/proxy';
+const BASE_BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080' : 'https://yt-dashboard-backend.vercel.app')) + '/api/youtube';
+const API_URL = `${BASE_BACKEND_URL}/proxy`;
 
 const fetchFromProxy = async (endpoint: string, params: Record<string, string>) => {
     const url = new URL(API_URL);
@@ -451,4 +454,26 @@ export const fetchVideoDailyMetrics = async (videoId: string, startDate: string,
         console.error("Error fetching daily metrics:", e);
         return { rows: [], hasRevenue: false };
     }
+};
+
+export const fetchVideosFromDb = async (channelId: string): Promise<VideoData[]> => {
+    const res = await fetch(`${BASE_BACKEND_URL}/dashboard?channelId=${channelId}`);
+    if (!res.ok) throw new Error("Erro ao buscar vídeos do banco de dados.");
+    return await res.json();
+};
+
+export const fetchVideoDeepDiveFromDb = async (videoId: string): Promise<{ retention: any[], traffic: any[] }> => {
+    const res = await fetch(`${BASE_BACKEND_URL}/video-details/${videoId}`);
+    if (!res.ok) throw new Error("Erro ao buscar detalhes profundos do vídeo.");
+    return await res.json();
+};
+
+export const triggerSync = async (channelId: string, includeDeepDive: boolean = true) => {
+    const res = await fetch(`${BASE_BACKEND_URL.replace('/proxy', '')}/sync-detailed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelId, includeDeepDive })
+    });
+    if (!res.ok) throw new Error("Erro ao disparar sincronização.");
+    return await res.json();
 };

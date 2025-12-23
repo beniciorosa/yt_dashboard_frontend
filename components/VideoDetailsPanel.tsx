@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { X, TrendingUp, Users, Globe, Clock, DollarSign, Eye, ThumbsUp, MessageCircle, UserPlus, Calendar, BarChart2, Filter } from 'lucide-react';
-import { VideoData, fetchVideoDemographics, fetchVideoTrafficSources, fetchVideoDailyMetrics } from '../services/youtubeService';
+import { VideoData, fetchVideoDemographics, fetchVideoTrafficSources, fetchVideoDailyMetrics, fetchVideoDeepDiveFromDb } from '../services/youtubeService';
 import { Line } from 'react-chartjs-2';
 import {
     Chart as ChartJS,
@@ -39,8 +39,9 @@ export const VideoDetailsPanel: React.FC<VideoDetailsPanelProps> = ({ video, isO
     const [demographics, setDemographics] = useState<{ age: any[], gender: any[] } | null>(null);
     const [trafficSources, setTrafficSources] = useState<any[]>([]);
     const [dailyMetrics, setDailyMetrics] = useState<{ rows: any[], hasRevenue: boolean }>({ rows: [], hasRevenue: false });
-    const [activeTab, setActiveTab] = useState<'overview' | 'audience' | 'traffic'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'audience' | 'traffic' | 'retention'>('overview');
     const [period, setPeriod] = useState<PeriodOption>('28d');
+    const [deepDive, setDeepDive] = useState<{ retention: any[], traffic: any[] }>({ retention: [], traffic: [] });
 
     useEffect(() => {
         if (isOpen && video) {
@@ -77,15 +78,17 @@ export const VideoDetailsPanel: React.FC<VideoDetailsPanelProps> = ({ video, isO
         const endStr = end.toISOString();
 
         try {
-            const [demoData, trafficData, dailyData] = await Promise.all([
+            const [demoData, trafficData, dailyData, dbDeepDive] = await Promise.all([
                 fetchVideoDemographics(video.id, startStr, endStr),
                 fetchVideoTrafficSources(video.id, startStr, endStr),
-                fetchVideoDailyMetrics(video.id, startStr, endStr)
+                fetchVideoDailyMetrics(video.id, startStr, endStr),
+                fetchVideoDeepDiveFromDb(video.id)
             ]);
 
             setDemographics(demoData);
             setTrafficSources(trafficData);
             setDailyMetrics(dailyData || { rows: [], hasRevenue: false });
+            if (dbDeepDive) setDeepDive(dbDeepDive);
         } catch (error) {
             console.error("Error loading video details:", error);
         } finally {
@@ -214,6 +217,13 @@ export const VideoDetailsPanel: React.FC<VideoDetailsPanelProps> = ({ video, isO
                         >
                             Fontes de Tráfego
                             {activeTab === 'traffic' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></div>}
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('retention')}
+                            className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === 'retention' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                        >
+                            Retenção
+                            {activeTab === 'retention' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></div>}
                         </button>
                     </div>
                 </div>
@@ -417,6 +427,74 @@ export const VideoDetailsPanel: React.FC<VideoDetailsPanelProps> = ({ video, isO
                                         ) : (
                                             <p className="text-sm text-slate-500 dark:text-slate-400 italic">Sem dados de tráfego disponíveis.</p>
                                         )}
+                                    </div>
+
+                                    {/* DETAILED KEYWORDS */}
+                                    {deepDive.traffic.length > 0 && (
+                                        <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                            <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-4">Palavras-Chave e Sugestões Detalhadas</h3>
+                                            <div className="space-y-2">
+                                                {deepDive.traffic.map((t: any, idx: number) => (
+                                                    <div key={idx} className="flex justify-between items-center text-sm border-b border-slate-50 dark:border-slate-700 pb-2">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-slate-900 dark:text-white font-medium">{t.source_detail}</span>
+                                                            <span className="text-xs text-slate-500">{t.source_type === 'YT_SEARCH' ? 'Pesquisa' : 'Sugerido'}</span>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className="font-bold text-blue-600">{t.views} views</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* RETENTION TAB */}
+                            {activeTab === 'retention' && (
+                                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+                                    <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                        <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                                            <TrendingUp size={16} className="text-blue-500" />
+                                            Curva de Retenção
+                                        </h3>
+                                        <div className="h-64 w-full">
+                                            {deepDive.retention.length > 0 ? (
+                                                <Line
+                                                    data={{
+                                                        labels: deepDive.retention.map(r => `${r.second_mark}s`),
+                                                        datasets: [{
+                                                            label: 'Retenção (%)',
+                                                            data: deepDive.retention.map(r => r.retention_percentage),
+                                                            borderColor: 'rgb(59, 130, 246)',
+                                                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                                            tension: 0.1,
+                                                            fill: true,
+                                                            pointRadius: 0
+                                                        }]
+                                                    }}
+                                                    options={{
+                                                        responsive: true,
+                                                        maintainAspectRatio: false,
+                                                        scales: {
+                                                            y: { min: 0, max: 100, ticks: { callback: (v) => `${v}%` } },
+                                                            x: { display: false }
+                                                        },
+                                                        plugins: { legend: { display: false } }
+                                                    }}
+                                                />
+                                            ) : (
+                                                <div className="h-full flex items-center justify-center text-slate-400 text-sm">
+                                                    Sem dados de retenção disponíveis para este vídeo.
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                                        <p className="text-sm text-blue-800 dark:text-blue-300">
+                                            <strong>Dica:</strong> Pontos de queda acentuada indicam momentos onde o público perde o interesse. Picos indicam re-visualizações.
+                                        </p>
                                     </div>
                                 </div>
                             )}

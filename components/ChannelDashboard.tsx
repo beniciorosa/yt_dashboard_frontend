@@ -1,7 +1,7 @@
 // --- START OF FILE components/ChannelDashboard.tsx ---
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { fetchMyChannel } from '../services/storageService';
-import { fetchYoutubeChannelData, fetchTopVideosFromAnalytics, VideoData } from '../services/youtubeService';
+import { fetchYoutubeChannelData, fetchTopVideosFromAnalytics, fetchVideosFromDb, triggerSync, VideoData } from '../services/youtubeService';
 import { Competitor } from '../types';
 import { logout } from '../services/authService';
 import { Loader2, TrendingUp, DollarSign, Eye, Video, User, RefreshCw, Filter, ArrowUpDown, ArrowUp, ArrowDown, AlertCircle, Lock, LogOut, Search, BarChart2 } from 'lucide-react';
@@ -86,10 +86,10 @@ export const ChannelDashboard: React.FC<Props> = ({ isLoggedIn }) => {
                         });
                     }
 
-                    const { start, end } = getDatesFromFilter();
-                    const formatDate = (d: Date) => d.toISOString().split('T')[0];
-                    const analyticsVideos = await fetchTopVideosFromAnalytics(formatDate(start), formatDate(end));
-                    setVideos(analyticsVideos);
+                    if (channelData && channelData.competitor.id) {
+                        const dbVideos = await fetchVideosFromDb(channelData.competitor.id);
+                        setVideos(dbVideos);
+                    }
                 }
             }
         } catch (err: any) {
@@ -229,10 +229,22 @@ export const ChannelDashboard: React.FC<Props> = ({ isLoggedIn }) => {
                 <div className="flex flex-col md:flex-row items-center gap-6 relative">
                     <div className="absolute top-0 right-0 flex items-center gap-2">
                         <button
-                            onClick={loadData}
+                            onClick={async () => {
+                                if (myChannel?.id) {
+                                    setLoading(true);
+                                    try {
+                                        await triggerSync(myChannel.id);
+                                        await loadData();
+                                    } catch (err) {
+                                        console.error("Sync failed", err);
+                                    } finally {
+                                        setLoading(false);
+                                    }
+                                }
+                            }}
                             disabled={loading}
                             className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full transition-colors disabled:opacity-50"
-                            title="Recarregar API"
+                            title="Sincronizar com YouTube"
                         >
                             <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
                         </button>
