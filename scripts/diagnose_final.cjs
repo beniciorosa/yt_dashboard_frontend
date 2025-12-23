@@ -33,18 +33,11 @@ const targetSubstrings = [
     "product ads: aprenda calcular"
 ];
 
-// REPLICATING NEW LOGIC FROM SERVICE
 function normalizeTitle(title) {
     if (!title) return '';
     let normalized = title.trim().toLowerCase();
-
-    // 1. Remove trailing dates in PT-BR (e.g., "27 de nov. de 2025")
     normalized = normalized.replace(/\s+\d{1,2}\s+de\s+[a-zç\.]+\s+de\s+\d{4}.*$/, '');
-
-    // 2. Remove trailing status words if they appear as metadata in title
     normalized = normalized.replace(/\s+(encerrou|pausada|ativa|active|ended|paused).*$/, '');
-
-    // 3. Remove non-alphanumeric at the end and collapse spaces
     return normalized
         .replace(/[^a-z0-9áàâãéèêíïóôõöúçñ\(\)]+$/, '')
         .replace(/\s+/g, ' ')
@@ -53,7 +46,7 @@ function normalizeTitle(title) {
 
 async function diagnose() {
     const { data: allData, error } = await supabase.from('yt_promotions').select('*');
-    if (error) return console.error(allData);
+    if (error) return console.error(error);
 
     const check = {};
 
@@ -69,7 +62,8 @@ async function diagnose() {
         }));
     });
 
-    console.log(JSON.stringify(check, null, 2));
+    fs.writeFileSync(path.join(__dirname, 'results_final.json'), JSON.stringify(check, null, 2));
+    console.log('Results written to results_final.json');
 }
 
 diagnose();
