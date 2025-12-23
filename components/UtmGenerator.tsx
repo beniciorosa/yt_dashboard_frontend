@@ -158,7 +158,8 @@ export const UtmGenerator: React.FC = () => {
         try {
             const { data, error } = await supabase
                 .from('yt_myvideos')
-                .select('video_id, title, published_at, thumbnail_url, description')
+                .select('video_id, title, published_at, thumbnail_url, description, privacy_status')
+                .eq('privacy_status', 'public')
                 .order('published_at', { ascending: true });
 
             if (error) throw error;
@@ -283,7 +284,8 @@ export const UtmGenerator: React.FC = () => {
         try {
             const { data, error } = await supabase
                 .from('yt_myvideos')
-                .select('video_id, title, published_at, thumbnail_url, description')
+                .select('video_id, title, published_at, thumbnail_url, description, privacy_status')
+                .eq('privacy_status', 'public')
                 .or(`title.ilike.%${videoSearch}%,video_id.eq.${videoSearch}`)
                 .limit(10);
 
