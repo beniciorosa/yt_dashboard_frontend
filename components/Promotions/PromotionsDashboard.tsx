@@ -13,6 +13,7 @@ export const PromotionsDashboard: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<'Ativa' | 'Pausada' | 'Encerrada' | 'Todas'>('Ativa');
     const [sortKey, setSortKey] = useState<SortKey>('inscritos');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
     const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
@@ -46,6 +47,17 @@ export const PromotionsDashboard: React.FC = () => {
 
     const processedPromotions = useMemo(() => {
         let list = [...promotions];
+
+        // Filter by Status
+        if (statusFilter !== 'Todas') {
+            list = list.filter(p => {
+                const s = p.status?.toLowerCase() || '';
+                if (statusFilter === 'Ativa') return s.includes('ativ') || s.includes('activ');
+                if (statusFilter === 'Pausada') return s.includes('paus');
+                if (statusFilter === 'Encerrada') return s.includes('encerr') || s.includes('complet') || s.includes('finish') || s.includes('end');
+                return true;
+            });
+        }
 
         // Filter by Search Query
         if (searchQuery.trim()) {
@@ -134,7 +146,23 @@ export const PromotionsDashboard: React.FC = () => {
                     )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                    {/* Status Filters */}
+                    <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg mr-2">
+                        {(['Ativa', 'Pausada', 'Encerrada', 'Todas'] as const).map((s) => (
+                            <button
+                                key={s}
+                                onClick={() => setStatusFilter(s)}
+                                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${statusFilter === s
+                                    ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                    }`}
+                            >
+                                {s}
+                            </button>
+                        ))}
+                    </div>
+
                     <div className="relative">
                         <input
                             type="text"
@@ -261,7 +289,9 @@ export const PromotionsDashboard: React.FC = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium 
-                                                ${promo.status === 'Ativa' || promo.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}
+                                                ${(promo.status === 'Ativa' || promo.status === 'Active') ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                                                    (promo.status === 'Pausada' || promo.status === 'Paused') ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' :
+                                                        'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}
                                             `}>
                                                 {promo.status}
                                             </span>
