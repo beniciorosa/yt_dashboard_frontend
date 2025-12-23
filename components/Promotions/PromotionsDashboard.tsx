@@ -45,6 +45,14 @@ export const PromotionsDashboard: React.FC = () => {
         }
     };
 
+    const isStatusMatch = (status: string, filter: string) => {
+        const s = (status || '').toLowerCase();
+        if (filter === 'Ativa') return s === 'ativa' || s === 'active' || s.includes('ativ');
+        if (filter === 'Pausada') return s === 'pausada' || s === 'paused' || s.includes('paus');
+        if (filter === 'Encerrada') return s === 'encerrada' || s === 'completed' || s === 'finished' || s === 'ended' || s.includes('encerr') || s.includes('end');
+        return true;
+    };
+
     const processedPromotions = useMemo(() => {
         let list = [...promotions];
 
@@ -75,13 +83,6 @@ export const PromotionsDashboard: React.FC = () => {
         return list;
     }, [promotions, sortKey, sortDirection, searchQuery]);
 
-    const isStatusMatch = (status: string, filter: string) => {
-        const s = (status || '').toLowerCase();
-        if (filter === 'Ativa') return s === 'ativa' || s === 'active' || s.includes('ativ');
-        if (filter === 'Pausada') return s === 'pausada' || s === 'paused' || s.includes('paus');
-        if (filter === 'Encerrada') return s === 'encerrada' || s === 'completed' || s === 'finished' || s === 'ended' || s.includes('encerr') || s.includes('end');
-        return true;
-    };
 
     const activeCount = useMemo(() => {
         return promotions.filter(p => isStatusMatch(p.status, 'Ativa')).length;
