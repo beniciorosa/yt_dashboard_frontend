@@ -39,25 +39,34 @@ export const fetchPromotions = async (): Promise<Promotion[]> => {
 
         if (!data || data.length === 0) return [];
 
-        // Filter to keep only the latest entry for each campaign title
-        // Since data is already ordered by data_coleta DESC, the first occurrence of a title is the latest.
+        // 1. Determine the latest sync batch
+        // We find the max data_coleta and take everything within a 5-minute window of it.
+        const maxColeta = new Date(data[0].data_coleta).getTime();
+        const batchWindow = 5 * 60 * 1000; // 5 minutes
+
+        const latestBatch = data.filter(item => {
+            const itemTime = new Date(item.data_coleta).getTime();
+            return (maxColeta - itemTime) <= batchWindow;
+        });
+
+        // 2. Filter to keep only the latest entry per campaign WITHIN the batch
         const latestPromotionsMap = new Map<string, any>();
 
         const normalizeTitle = (title: string): string => {
             if (!title) return '';
             // Aggressive normalization: remove non-alphanumeric at the end, lowercase, trim
             return title.trim()
-                .replace(/[^a-zA-Z0-9áàâãéèêíïóôõöúçÑñ\(\)]+$/, '')
-                .replace(/\s+/g, ' ')
+                .replace(/[^a-zA-Z0-9áàâãéèêíïóôõöúçÑñ\(\)]+$/, '') // Remove trailing non-alpha except some common chars
+                .replace(/\s+/g, ' ') // Collapse spaces
                 .trim();
         };
 
-        data.forEach((item: any) => {
+        latestBatch.forEach((item: any) => {
             const normalized = normalizeTitle(item.titulo);
             if (!latestPromotionsMap.has(normalized)) {
                 latestPromotionsMap.set(normalized, {
                     ...item,
-                    titulo: normalized
+                    titulo: normalized // Keep normalized version for better grouping
                 });
             }
         });

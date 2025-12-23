@@ -81,7 +81,7 @@ export const PromotionsDashboard: React.FC = () => {
         });
 
         return list;
-    }, [promotions, sortKey, sortDirection, searchQuery, statusFilter]);
+    }, [promotions, sortKey, sortDirection, searchQuery]);
 
 
     const activeCount = useMemo(() => {
@@ -150,30 +150,31 @@ export const PromotionsDashboard: React.FC = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                    {/* Status Dropdown (Droplist) */}
-                    <div className="relative group min-w-[180px]">
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                            <Filter size={14} />
-                        </div>
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value as any)}
-                            className="w-full pl-9 pr-10 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
-                        >
-                            {(['Ativa', 'Pausada', 'Encerrada', 'Todas'] as const).map((s) => {
-                                const countForStatus = s === 'Todas'
-                                    ? promotions.length
-                                    : promotions.filter(p => isStatusMatch(p.status, s)).length;
-                                return (
-                                    <option key={s} value={s}>
-                                        {s} ({countForStatus})
-                                    </option>
-                                );
-                            })}
-                        </select>
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                            <ArrowDown size={14} />
-                        </div>
+                    {/* Status Filters */}
+                    <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl border border-gray-200 dark:border-gray-600">
+                        {(['Ativa', 'Pausada', 'Encerrada', 'Todas'] as const).map((s) => {
+                            const countForStatus = s === 'Todas'
+                                ? promotions.length
+                                : promotions.filter(p => isStatusMatch(p.status, s)).length;
+
+                            return (
+                                <button
+                                    key={s}
+                                    onClick={() => setStatusFilter(s)}
+                                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${statusFilter === s
+                                        ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-600/50'
+                                        }`}
+                                >
+                                    {s}
+                                    {countForStatus > 0 && (
+                                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusFilter === s ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600' : 'bg-gray-200 dark:bg-gray-600 text-gray-500'}`}>
+                                            {countForStatus}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
 
                     <div className="flex items-center gap-2">
