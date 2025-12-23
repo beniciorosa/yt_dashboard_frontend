@@ -81,7 +81,7 @@ export const PromotionsDashboard: React.FC = () => {
         });
 
         return list;
-    }, [promotions, sortKey, sortDirection, searchQuery]);
+    }, [promotions, sortKey, sortDirection, searchQuery, statusFilter]);
 
 
     const activeCount = useMemo(() => {
