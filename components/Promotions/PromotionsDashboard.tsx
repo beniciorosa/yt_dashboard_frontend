@@ -50,13 +50,7 @@ export const PromotionsDashboard: React.FC = () => {
 
         // Filter by Status
         if (statusFilter !== 'Todas') {
-            list = list.filter(p => {
-                const s = p.status?.toLowerCase() || '';
-                if (statusFilter === 'Ativa') return s.includes('ativ') || s.includes('activ');
-                if (statusFilter === 'Pausada') return s.includes('paus');
-                if (statusFilter === 'Encerrada') return s.includes('encerr') || s.includes('complet') || s.includes('finish') || s.includes('end');
-                return true;
-            });
+            list = list.filter(p => isStatusMatch(p.status, statusFilter));
         }
 
         // Filter by Search Query
@@ -81,8 +75,16 @@ export const PromotionsDashboard: React.FC = () => {
         return list;
     }, [promotions, sortKey, sortDirection, searchQuery]);
 
+    const isStatusMatch = (status: string, filter: string) => {
+        const s = (status || '').toLowerCase();
+        if (filter === 'Ativa') return s === 'ativa' || s === 'active' || s.includes('ativ');
+        if (filter === 'Pausada') return s === 'pausada' || s === 'paused' || s.includes('paus');
+        if (filter === 'Encerrada') return s === 'encerrada' || s === 'completed' || s === 'finished' || s === 'ended' || s.includes('encerr') || s.includes('end');
+        return true;
+    };
+
     const activeCount = useMemo(() => {
-        return promotions.filter(p => p.status === 'Ativa' || p.status === 'Active').length;
+        return promotions.filter(p => isStatusMatch(p.status, 'Ativa')).length;
     }, [promotions]);
 
     const totals = useMemo(() => {
@@ -149,18 +151,29 @@ export const PromotionsDashboard: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                     {/* Status Filters */}
                     <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl border border-gray-200 dark:border-gray-600">
-                        {(['Ativa', 'Pausada', 'Encerrada', 'Todas'] as const).map((s) => (
-                            <button
-                                key={s}
-                                onClick={() => setStatusFilter(s)}
-                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === s
-                                    ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                                    }`}
-                            >
-                                {s}
-                            </button>
-                        ))}
+                        {(['Ativa', 'Pausada', 'Encerrada', 'Todas'] as const).map((s) => {
+                            const countForStatus = s === 'Todas'
+                                ? promotions.length
+                                : promotions.filter(p => isStatusMatch(p.status, s)).length;
+
+                            return (
+                                <button
+                                    key={s}
+                                    onClick={() => setStatusFilter(s)}
+                                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${statusFilter === s
+                                        ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-600/50'
+                                        }`}
+                                >
+                                    {s}
+                                    {countForStatus > 0 && (
+                                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusFilter === s ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600' : 'bg-gray-200 dark:bg-gray-600 text-gray-500'}`}>
+                                            {countForStatus}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
 
                     <div className="flex items-center gap-2">
