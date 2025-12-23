@@ -39,17 +39,7 @@ export const fetchPromotions = async (): Promise<Promotion[]> => {
 
         if (!data || data.length === 0) return [];
 
-        // 1. Determine the latest sync batch
-        // We find the max data_coleta and take everything within a 5-minute window of it.
-        const maxColeta = new Date(data[0].data_coleta).getTime();
-        const batchWindow = 5 * 60 * 1000; // 5 minutes
-
-        const latestBatch = data.filter(item => {
-            const itemTime = new Date(item.data_coleta).getTime();
-            return (maxColeta - itemTime) <= batchWindow;
-        });
-
-        // 2. Filter to keep only the latest entry per campaign WITHIN the batch
+        // Filter to keep only the latest entry for each unique title
         const latestPromotionsMap = new Map<string, any>();
 
         const normalizeTitle = (title: string): string => {
@@ -61,7 +51,7 @@ export const fetchPromotions = async (): Promise<Promotion[]> => {
                 .trim();
         };
 
-        latestBatch.forEach((item: any) => {
+        data.forEach((item: any) => {
             const normalized = normalizeTitle(item.titulo);
             if (!latestPromotionsMap.has(normalized)) {
                 latestPromotionsMap.set(normalized, {
