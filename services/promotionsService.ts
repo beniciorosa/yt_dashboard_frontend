@@ -39,12 +39,21 @@ export const fetchPromotions = async (): Promise<Promotion[]> => {
         if (!data) return [];
 
         // Filter to keep only the latest for each title
-        const latestPromotionsMap = new Map<string, Promotion>();
+        const latestPromotionsMap = new Map<string, any>();
+
+        const normalizeTitle = (title: string): string => {
+            if (!title) return '';
+            // Remove trailing hyphens, dots and extra spaces
+            return title.trim().replace(/\s*-\s*$/, '').replace(/\.+$/, '').trim();
+        };
 
         data.forEach((item: any) => {
-            // Normalize title to ensure we group correctly? Assuming exact match.
-            if (!latestPromotionsMap.has(item.titulo)) {
-                latestPromotionsMap.set(item.titulo, item);
+            const normalized = normalizeTitle(item.titulo);
+            if (!latestPromotionsMap.has(normalized)) {
+                latestPromotionsMap.set(normalized, {
+                    ...item,
+                    titulo: normalized // Optionally keep the normalized version
+                });
             }
         });
 

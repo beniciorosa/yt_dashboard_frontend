@@ -128,7 +128,7 @@ export const PromotionsDashboard: React.FC = () => {
         <div className="animate-fade-in space-y-6 pb-10">
             {/* Header / Instructions or Summary could go here */}
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col md:flex-row justify-between items-center gap-4">
-                <div>
+                <div className="flex-1 w-full">
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                         <Tag className="text-blue-600" />
                         Minhas Promoções
@@ -146,14 +146,14 @@ export const PromotionsDashboard: React.FC = () => {
                     )}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                     {/* Status Filters */}
-                    <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg mr-2">
+                    <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl border border-gray-200 dark:border-gray-600">
                         {(['Ativa', 'Pausada', 'Encerrada', 'Todas'] as const).map((s) => (
                             <button
                                 key={s}
                                 onClick={() => setStatusFilter(s)}
-                                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${statusFilter === s
+                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === s
                                     ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
                                     : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                                     }`}
@@ -163,23 +163,25 @@ export const PromotionsDashboard: React.FC = () => {
                         ))}
                     </div>
 
-                    <div className="relative">
-                        <input
-                            type="text"
-                            placeholder="Buscar campanha..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white"
-                        />
-                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <div className="flex items-center gap-2">
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder="Buscar campanha..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 dark:text-white w-full sm:w-64 transition-all"
+                            />
+                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        </div>
+                        <button
+                            onClick={loadData}
+                            className="p-2.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-xl transition-colors border border-blue-100 dark:border-blue-900/30"
+                            title="Atualizar"
+                        >
+                            <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
+                        </button>
                     </div>
-                    <button
-                        onClick={loadData}
-                        className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                        title="Atualizar"
-                    >
-                        <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
-                    </button>
                 </div>
             </div>
 
