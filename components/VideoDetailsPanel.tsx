@@ -262,7 +262,7 @@ export const VideoDetailsPanel: React.FC<VideoDetailsPanelProps> = ({ video, isO
                                                 <UserPlus size={14} /> Inscritos
                                             </div>
                                             <div className="text-xl font-bold text-slate-900 dark:text-white">
-                                                {video.subscribersGained !== undefined ? new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(video.subscribersGained) : '-'}
+                                                {video.subscribersGained !== undefined ? new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(Math.round(video.subscribersGained)) : '-'}
                                             </div>
                                         </div>
                                         <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">

@@ -36,6 +36,7 @@ export const ChannelDashboard: React.FC<Props> = ({ isLoggedIn }) => {
 
     // Video Details Panel State
     const [selectedVideo, setSelectedVideo] = useState<VideoData | null>(null);
+    const [syncNotice, setSyncNotice] = useState<string | null>(null);
 
 
     const getDatesFromFilter = useCallback(() => {
@@ -232,11 +233,16 @@ export const ChannelDashboard: React.FC<Props> = ({ isLoggedIn }) => {
                             onClick={async () => {
                                 if (myChannel?.id) {
                                     setLoading(true);
+                                    setSyncNotice("Iniciando sincronização profunda (Tier 1 e Tier 2)... Isso pode levar alguns segundos.");
                                     try {
-                                        await triggerSync(myChannel.id);
+                                        await triggerSync(myChannel.id, true);
+                                        setSyncNotice("Sincronização concluída! Recarregando dados...");
                                         await loadData();
+                                        setTimeout(() => setSyncNotice(null), 3000);
                                     } catch (err) {
                                         console.error("Sync failed", err);
+                                        setSyncNotice("Falha na sincronização. Tente novamente.");
+                                        setTimeout(() => setSyncNotice(null), 3000);
                                     } finally {
                                         setLoading(false);
                                     }
@@ -249,6 +255,15 @@ export const ChannelDashboard: React.FC<Props> = ({ isLoggedIn }) => {
                             <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
                         </button>
                     </div>
+
+                    {syncNotice && (
+                        <div className="absolute top-12 right-0 z-10 bg-blue-600 text-white text-xs px-4 py-2 rounded-lg shadow-lg animate-in fade-in slide-in-from-top-2">
+                            <div className="flex items-center gap-2">
+                                <Loader2 size={12} className="animate-spin" />
+                                {syncNotice}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-100 dark:border-gray-600 shadow-sm shrink-0">
                         {channelAvatar ? (
@@ -435,7 +450,7 @@ export const ChannelDashboard: React.FC<Props> = ({ isLoggedIn }) => {
 
                             {processedVideos.map((video, idx) => {
                                 const watchTimeHours = video.estimatedMinutesWatched ? (video.estimatedMinutesWatched / 60).toFixed(1) : '-';
-                                const revenue = video.estimatedRevenue !== undefined ? video.estimatedRevenue : (video.viewCount / 1000 * 5.00);
+                                const revenue = video.estimatedRevenue || 0;
 
                                 return (
                                     <tr
