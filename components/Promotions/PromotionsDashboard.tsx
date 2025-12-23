@@ -47,9 +47,15 @@ export const PromotionsDashboard: React.FC = () => {
 
     const isStatusMatch = (status: string, filter: string) => {
         const s = (status || '').toLowerCase();
-        if (filter === 'Ativa') return s === 'ativa' || s === 'active' || s.includes('ativ');
-        if (filter === 'Pausada') return s === 'pausada' || s === 'paused' || s.includes('paus');
-        if (filter === 'Encerrada') return s === 'encerrada' || s === 'completed' || s === 'finished' || s === 'ended' || s.includes('encerr') || s.includes('end');
+        const isAtiva = s === 'ativa' || s === 'active' || s.includes('ativ') || s.includes('activ');
+        const isPausada = s === 'pausada' || s === 'paused' || s.includes('paus');
+        const isEncerrada = s === 'encerrada' || s === 'completed' || s === 'finished' || s === 'ended' || s.includes('encerr') || s.includes('end');
+
+        if (filter === 'Ativa') return isAtiva;
+        if (filter === 'Pausada') return isPausada;
+        if (filter === 'Encerrada') return isEncerrada;
+        // Only return true for "Todas" if it matches one of the handled categories
+        if (filter === 'Todas') return isAtiva || isPausada || isEncerrada;
         return true;
     };
 
@@ -57,9 +63,7 @@ export const PromotionsDashboard: React.FC = () => {
         let list = [...promotions];
 
         // Filter by Status
-        if (statusFilter !== 'Todas') {
-            list = list.filter(p => isStatusMatch(p.status, statusFilter));
-        }
+        list = list.filter(p => isStatusMatch(p.status, statusFilter));
 
         // Filter by Search Query
         if (searchQuery.trim()) {
@@ -153,9 +157,7 @@ export const PromotionsDashboard: React.FC = () => {
                     {/* Status Filters */}
                     <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl border border-gray-200 dark:border-gray-600">
                         {(['Ativa', 'Pausada', 'Encerrada', 'Todas'] as const).map((s) => {
-                            const countForStatus = s === 'Todas'
-                                ? promotions.length
-                                : promotions.filter(p => isStatusMatch(p.status, s)).length;
+                            const countForStatus = promotions.filter(p => isStatusMatch(p.status, s)).length;
 
                             return (
                                 <button

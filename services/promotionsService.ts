@@ -44,10 +44,10 @@ export const fetchPromotions = async (): Promise<Promotion[]> => {
 
         const normalizeTitle = (title: string): string => {
             if (!title) return '';
-            // Aggressive normalization: remove non-alphanumeric at the end, lowercase, trim
-            return title.trim()
-                .replace(/[^a-zA-Z0-9áàâãéèêíïóôõöúçÑñ\(\)]+$/, '') // Remove trailing non-alpha except some common chars
-                .replace(/\s+/g, ' ') // Collapse spaces
+            // Aggressive normalization: lowercase, remove non-alphanumeric at the end, collapse spaces
+            return title.trim().toLowerCase()
+                .replace(/[^a-z0-9áàâãéèêíïóôõöúçñ\(\)]+$/, '')
+                .replace(/\s+/g, ' ')
                 .trim();
         };
 
