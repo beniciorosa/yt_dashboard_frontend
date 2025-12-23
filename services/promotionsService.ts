@@ -161,7 +161,7 @@ export const fetchPromotionHistory = async (title: string, days?: number): Promi
         let query = supabase
             .from('yt_promotions')
             .select('*')
-            .eq('titulo', title)
+            .ilike('titulo', `${title}%`)
             .order('data_coleta', { ascending: true });
 
         if (days) {
