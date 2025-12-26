@@ -146,4 +146,3 @@ export const FavoritesPanel: React.FC<Props> = ({ isOpen, onClose, onRefreshNeed
         </div>
     );
 };
-```
