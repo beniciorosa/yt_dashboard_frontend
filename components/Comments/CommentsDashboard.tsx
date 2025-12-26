@@ -2,7 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { CommentThread, fetchComments } from '../../services/commentsService';
 import { fetchVideoDetailsByIds, VideoData } from '../../services/youtubeService';
 import { CommentItem } from './CommentItem';
-import { MessageSquare, Filter, RefreshCw, Search, Loader2, PlaySquare } from 'lucide-react';
+import { MessageSquare, Filter, RefreshCw, Search, Loader2, PlaySquare, Trophy, User } from 'lucide-react';
+import { fetchTopCommenters, TopCommenter } from '../../services/commentsService';
+import { CommentHistoryPanel } from './CommentHistoryPanel';
 
 export const CommentsDashboard: React.FC = () => {
     const [comments, setComments] = useState<CommentThread[]>([]);
@@ -17,6 +19,11 @@ export const CommentsDashboard: React.FC = () => {
 
     // Cache
     const [videoCache, setVideoCache] = useState<Record<string, VideoData>>({});
+
+    // Ranking & History
+    const [topCommenters, setTopCommenters] = useState<TopCommenter[]>([]);
+    const [selectedUserForHistory, setSelectedUserForHistory] = useState<string | null>(null);
+    const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
 
     const loadComments = useCallback(async (reset = false, token?: string) => {
         if (reset) setIsLoading(true);
@@ -106,10 +113,25 @@ export const CommentsDashboard: React.FC = () => {
         }
     }, [filterOrder, searchTerms, showPendingOnly]);
 
+    const loadRanking = useCallback(async () => {
+        try {
+            const data = await fetchTopCommenters();
+            setTopCommenters(data);
+        } catch (e) {
+            console.warn("Failed to load ranking", e);
+        }
+    }, []);
+
     // Initial Load & Filter Change
     useEffect(() => {
         loadComments(true);
-    }, [filterOrder, searchTerms]);
+        loadRanking();
+    }, [filterOrder, searchTerms, loadRanking]);
+
+    const handleOpenHistory = (username: string) => {
+        setSelectedUserForHistory(username);
+        setIsHistoryPanelOpen(true);
+    };
 
     // Helper to check if unreplied
     const isUnreplied = (thread: CommentThread) => {
@@ -255,8 +277,13 @@ export const CommentsDashboard: React.FC = () => {
                                     key={thread.id}
                                     thread={thread}
                                     video={videoCache[thread.snippet.videoId]}
-                                    onReplySuccess={handleReplySuccess}
+                                    onReplySuccess={() => {
+                                        handleReplySuccess(thread.id);
+                                        loadRanking(); // Refresh ranking on reply
+                                    }}
                                     onDeleteSuccess={handleDeleteSuccess}
+                                    ranking={topCommenters}
+                                    onUsernameClick={handleOpenHistory}
                                 />
                             ))
                         )}
@@ -277,6 +304,48 @@ export const CommentsDashboard: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* Top Commenters Ranking (Mobile Friendly / Desktop Sidebarish) */}
+            {topCommenters.length > 0 && (
+                <div className="shrink-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 overflow-x-auto">
+                    <div className="max-w-5xl mx-auto flex items-center gap-6">
+                        <div className="flex items-center gap-2 shrink-0">
+                            <Trophy size={18} className="text-amber-500" />
+                            <span className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Top 5 Commenters:</span>
+                        </div>
+                        <div className="flex items-center gap-4 flex-1">
+                            {topCommenters.map((user, idx) => (
+                                <button
+                                    key={user.username}
+                                    onClick={() => handleOpenHistory(user.username)}
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full border border-gray-100 dark:border-gray-700 transition-all group shrink-0"
+                                >
+                                    <span className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${idx === 0 ? 'bg-amber-100 text-amber-600' :
+                                            idx === 1 ? 'bg-slate-200 text-slate-600' :
+                                                idx === 2 ? 'bg-orange-100 text-orange-600' :
+                                                    'bg-gray-100 text-gray-500'
+                                        }`}>
+                                        {idx + 1}
+                                    </span>
+                                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 transition-colors">
+                                        {user.username}
+                                    </span>
+                                    <span className="text-[10px] text-gray-400 font-medium">
+                                        ({user.count})
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* History Panel */}
+            <CommentHistoryPanel
+                isOpen={isHistoryPanelOpen}
+                onClose={() => setIsHistoryPanelOpen(false)}
+                username={selectedUserForHistory}
+            />
         </div>
     );
 };

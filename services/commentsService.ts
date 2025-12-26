@@ -4,6 +4,7 @@ const BASE_URL = 'https://www.googleapis.com/youtube/v3';
 // Use the same backend domain style as youtubeService, but targeting the new proxy-action endpoint
 const API_BASE_ROOT = (import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080' : 'https://yt-dashboard-backend.vercel.app')) + '/api';
 const PROXY_ACTION_URL = `${API_BASE_ROOT}/youtube/proxy-action`;
+const BACKEND_API_URL = `${API_BASE_ROOT}/comments`;
 
 export interface CommentSnippet {
     authorDisplayName: string;
@@ -271,8 +272,6 @@ export const rateComment = async (commentId: string, rating: 'like' | 'none'): P
 
 // --- AI & Quick Replies ---
 
-const BACKEND_API_URL = `${API_BASE_ROOT}/comments`;
-
 export const generateAiReply = async (commentText: string, videoTitle?: string, style: string = 'professional', authorName?: string): Promise<string> => {
     try {
         const res = await fetch(`${BACKEND_API_URL}/generate-reply`, {
@@ -351,5 +350,40 @@ export const fetchInteractionCount = async (username: string): Promise<number> =
     } catch (e) {
         console.warn(`Failed to fetch interactions for ${username}`, e);
         return 0;
+    }
+};
+
+export interface TopCommenter {
+    username: string;
+    count: number;
+}
+
+export interface CommentHistoryEntry {
+    id: number;
+    username: string;
+    comment_text: string;
+    reply_text: string;
+    created_at: string;
+}
+
+export const fetchTopCommenters = async (): Promise<TopCommenter[]> => {
+    try {
+        const res = await fetch(`${BACKEND_API_URL}/top-commenters`);
+        if (!res.ok) throw new Error("Failed to fetch top commenters");
+        return await res.json();
+    } catch (error) {
+        console.error("Error fetching top commenters:", error);
+        return [];
+    }
+};
+
+export const fetchUserHistory = async (username: string): Promise<CommentHistoryEntry[]> => {
+    try {
+        const res = await fetch(`${BACKEND_API_URL}/history/${encodeURIComponent(username)}`);
+        if (!res.ok) throw new Error("Failed to fetch user history");
+        return await res.json();
+    } catch (error) {
+        console.error(`Error fetching history for ${username}:`, error);
+        return [];
     }
 };

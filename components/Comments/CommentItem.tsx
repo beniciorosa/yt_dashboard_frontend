@@ -2,16 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { CommentThread, replyToComment, rateComment, deleteComment } from '../../services/commentsService';
 import { VideoData } from '../../services/youtubeService';
 import { MessageSquare, ThumbsUp, Trash2, CornerDownRight, Loader2, PlaySquare, Wand2, Zap, MoreHorizontal, Check, X, Plus, ChevronLeft, Users } from 'lucide-react';
-import { generateAiReply, fetchQuickReplies, createQuickReply, deleteQuickReply, learnReply, QuickReply, fetchInteractionCount } from '../../services/commentsService';
+import { generateAiReply, fetchQuickReplies, createQuickReply, deleteQuickReply, learnReply, QuickReply, fetchInteractionCount, TopCommenter } from '../../services/commentsService';
 
 interface Props {
     thread: CommentThread;
     video?: VideoData; // Optional video context
     onReplySuccess: (threadId: string) => void;
     onDeleteSuccess: (threadId: string) => void;
+    ranking?: TopCommenter[];
+    onUsernameClick?: (username: string) => void;
 }
 
-export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, onDeleteSuccess }) => {
+export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, onDeleteSuccess, ranking = [], onUsernameClick }) => {
     const { topLevelComment } = thread.snippet;
     const { snippet } = topLevelComment;
     const [isReplying, setIsReplying] = useState(false);
@@ -39,6 +41,8 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
             fetchInteractionCount(snippet.authorDisplayName).then(count => setInteractionCount(count));
         }
     }, [snippet.authorDisplayName]);
+
+    const userRank = ranking.findIndex(u => u.username === snippet.authorDisplayName) + 1;
 
     const handleAiReply = async () => {
         setIsGeneratingAi(true);
@@ -205,7 +209,10 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
 
                 {/* Header: Author & Time */}
                 <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                    <span className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate hover:underline cursor-pointer">
+                    <span
+                        className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate hover:underline cursor-pointer"
+                        onClick={() => onUsernameClick?.(snippet.authorDisplayName)}
+                    >
                         {snippet.authorDisplayName}
                     </span>
 
@@ -213,6 +220,16 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
                         <div className="flex items-center gap-1 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-[10px] font-medium border border-green-200 dark:border-green-800/50" title={`${interactionCount} interações anteriores`}>
                             <Users size={10} />
                             {interactionCount} interações
+                        </div>
+                    )}
+
+                    {userRank > 0 && userRank <= 5 && (
+                        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${userRank === 1 ? 'bg-amber-100 text-amber-600 border-amber-200' :
+                                userRank === 2 ? 'bg-slate-100 text-slate-600 border-slate-200' :
+                                    userRank === 3 ? 'bg-orange-100 text-orange-600 border-orange-200' :
+                                        'bg-blue-100 text-blue-600 border-blue-200'
+                            }`} title={`Top ${userRank} Commenter`}>
+                            #{userRank} TOP
                         </div>
                     )}
 
