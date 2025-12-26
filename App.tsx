@@ -9,13 +9,14 @@ import { CommentsDashboard } from './components/Comments/CommentsDashboard';
 import { PromotionsDashboard } from './components/Promotions/PromotionsDashboard';
 import { SalesMetricsDashboard } from './components/SalesMetrics/SalesMetricsDashboard';
 import { UserManagement } from './components/Admin/UserManagement';
+import { GeniusDashboard } from './components/Genius/GeniusDashboard';
 import { Login } from './components/Login';
 import { handleAuthCallback, initiateLogin, logout, isAuthenticated, getAccessToken, saveSession } from './services/authService';
 import { supabase } from './services/supabaseClient';
 import { Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
-  const [activeModule, setActiveModule] = useState<'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments' | 'promotions' | 'sales-metrics' | 'users'>('competitors');
+  const [activeModule, setActiveModule] = useState<'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments' | 'promotions' | 'sales-metrics' | 'users' | 'genius'>('competitors');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [userRole, setUserRole] = useState<string>('user');
@@ -189,6 +190,7 @@ const App: React.FC = () => {
             {activeModule === 'promotions' && 'Minhas Promoções'}
             {activeModule === 'sales-metrics' && 'Sales Metrics'}
             {activeModule === 'users' && 'Gestão de Usuários'}
+            {activeModule === 'genius' && 'GENIUS - Inteligência de Conteúdo'}
           </h2>
           <div className="flex items-center gap-4">
             <span className="text-xs text-gray-400 hidden md:inline">v1.9.1 (Protected)</span>
@@ -204,6 +206,7 @@ const App: React.FC = () => {
           {activeModule === 'promotions' && <PromotionsDashboard />}
           {activeModule === 'sales-metrics' && <SalesMetricsDashboard />}
           {activeModule === 'users' && <UserManagement />}
+          {activeModule === 'genius' && <GeniusDashboard />}
         </main>
       </div>
 

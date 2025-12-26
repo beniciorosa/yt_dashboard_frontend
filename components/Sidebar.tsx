@@ -3,12 +3,12 @@ import React from 'react';
 import {
   LayoutDashboard, LineChart, ChevronLeft, ChevronRight,
   BarChart3, Settings, Type, Link, Wrench, MessageSquare,
-  Megaphone, DollarSign, Users, LogOut, Youtube
+  Megaphone, DollarSign, Users, LogOut, Youtube, Brain, Sparkles
 } from 'lucide-react';
 
 interface Props {
-  activeModule: 'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments' | 'promotions' | 'sales-metrics' | 'users';
-  onNavigate: (module: 'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments' | 'promotions' | 'sales-metrics' | 'users') => void;
+  activeModule: 'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments' | 'promotions' | 'sales-metrics' | 'users' | 'genius';
+  onNavigate: (module: 'dashboard' | 'competitors' | 'description-gen' | 'utm-gen' | 'comments' | 'promotions' | 'sales-metrics' | 'users' | 'genius') => void;
   isCollapsed: boolean;
   toggleCollapse: () => void;
   onLogout: () => void;
@@ -163,6 +163,21 @@ export const Sidebar: React.FC<Props> = ({
           >
             <Link size={20} className="shrink-0" />
             {!isCollapsed && <span className="ml-3 font-medium whitespace-nowrap">Gerador de UTM</span>}
+          </button>
+
+          <button
+            onClick={() => onNavigate('genius')}
+            className={`w-full flex items-center p-3 rounded-lg transition-colors mt-1 ${activeModule === 'genius'
+              ? 'bg-gradient-to-r from-purple-500/10 to-blue-500/10 text-purple-700 dark:text-purple-400 border border-purple-200/50 dark:border-purple-800/50'
+              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
+              }`}
+            title="GENIUS - Insights AI"
+          >
+            <div className="relative">
+              <Sparkles size={10} className="absolute -top-1 -right-1 text-purple-500 animate-pulse" />
+              <Brain size={20} className="shrink-0" />
+            </div>
+            {!isCollapsed && <span className="ml-3 font-bold whitespace-nowrap tracking-tight">GENIUS</span>}
           </button>
 
           {userRole === 'admin' && (
