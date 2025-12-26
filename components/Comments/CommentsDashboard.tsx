@@ -246,6 +246,41 @@ export const CommentsDashboard: React.FC = () => {
                 </div>
             </div>
 
+            {/* Top Commenters Ranking */}
+            {topCommenters.length > 0 && (
+                <div className="shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 overflow-x-auto">
+                    <div className="max-w-5xl mx-auto flex items-center gap-6">
+                        <div className="flex items-center gap-2 shrink-0">
+                            <Trophy size={18} className="text-amber-500" />
+                            <span className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Top 5 Commenters:</span>
+                        </div>
+                        <div className="flex items-center gap-4 flex-1">
+                            {topCommenters.map((user, idx) => (
+                                <button
+                                    key={user.username}
+                                    onClick={() => handleOpenHistory(user.username)}
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full border border-gray-100 dark:border-gray-700 transition-all group shrink-0"
+                                >
+                                    <span className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${idx === 0 ? 'bg-amber-100 text-amber-600' :
+                                            idx === 1 ? 'bg-slate-200 text-slate-600' :
+                                                idx === 2 ? 'bg-orange-100 text-orange-600' :
+                                                    'bg-gray-100 text-gray-500'
+                                        }`}>
+                                        {idx + 1}
+                                    </span>
+                                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 transition-colors">
+                                        {user.username}
+                                    </span>
+                                    <span className="text-[10px] text-gray-400 font-medium">
+                                        ({user.count})
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Content List */}
             <div className="flex-1 overflow-y-auto">
                 {isLoading ? (
