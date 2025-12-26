@@ -46,8 +46,11 @@ export const PromotionsDashboard: React.FC = () => {
     };
 
     const isStatusMatch = (status: string, filter: string) => {
-        const s = (status || '').toLowerCase();
-        const isAtiva = s === 'ativa' || s === 'active' || s.includes('ativ') || s.includes('activ');
+        const s = (status || '').toLowerCase().trim();
+
+        // Stricter matching: check if the string STARTS with the status word 
+        // or equals it, to avoid matching words inside long policy messages.
+        const isAtiva = s === 'ativa' || s === 'active' || s.startsWith('ativa') || s.startsWith('active');
         const isPausada = s === 'pausada' || s === 'paused' || s.includes('paus');
         const isEncerrada = s === 'encerrada' || s === 'completed' || s === 'finished' || s === 'ended' || s.includes('encerr') || s.includes('end');
 

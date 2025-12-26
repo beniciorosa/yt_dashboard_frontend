@@ -53,7 +53,11 @@ export const fetchPromotions = async (): Promise<Promotion[]> => {
             // 2. Remove trailing status words if they appear as metadata in title
             normalized = normalized.replace(/\s+(encerrou|pausada|ativa|active|ended|paused).*$/, '');
 
-            // 3. Remove non-alphanumeric at the end and collapse spaces
+            // 3. New FIX: Remove everything starting from typical YouTube warning keywords (Reprovada, Declarações, etc.)
+            // as the scraper sometimes appends the entire policy text to the title.
+            normalized = normalized.split(/reprovada\s+"reprovada"|declarações\s+não\s+confiáveis/i)[0];
+
+            // 4. Remove non-alphanumeric at the end and collapse spaces
             return normalized
                 .replace(/[^a-z0-9áàâãéèêíïóôõöúçñ\(\)]+$/, '')
                 .replace(/\s+/g, ' ')
@@ -65,8 +69,18 @@ export const fetchPromotions = async (): Promise<Promotion[]> => {
             if (!latestPromotionsMap.has(normalized)) {
                 latestPromotionsMap.set(normalized, {
                     ...item,
-                    titulo: normalized // Keep normalized version for better grouping
+                    titulo_exibicao: item.titulo, // Keep the original or least-normalized for display
+                    titulo: normalized // Key for grouping
                 });
+            } else {
+                // If we already have it, but this one is "cleaner" (shorter title usually means less junk)
+                // we might want to update the display title, but keep the latest data based on data_coleta
+                // Since data is already ordered by data_coleta DESC, we already have the latest.
+                // But let's refine the display title if the current item has a shorter title than what we stored.
+                const current = latestPromotionsMap.get(normalized);
+                if (item.titulo.length < current.titulo_exibicao.length && item.titulo.length > 5) {
+                    current.titulo_exibicao = item.titulo;
+                }
             }
         });
 
@@ -139,6 +153,7 @@ export const fetchPromotions = async (): Promise<Promotion[]> => {
 
         const cleanedPromotions = Array.from(latestPromotionsMap.values()).map(p => ({
             ...p,
+            titulo: p.titulo_exibicao || p.titulo, // Use cleaned up display title
             custo: cleanCurrency(p.custo, 'custo'),
             impressoes: cleanInt(p.impressoes),
             visualizacoes: cleanInt(p.visualizacoes),

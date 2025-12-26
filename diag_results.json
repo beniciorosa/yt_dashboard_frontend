@@ -1,0 +1,41 @@
+{
+  "2 nichos que estão muito em alta no mercado livre": [
+    {
+      "id": 718,
+      "titulo": "2 nichos que estão muito em alta no Mercado Livre",
+      "status": "Pausada",
+      "data_coleta": "2025-12-26T15:23:18.782-03:00",
+      "custo": "135.10"
+    },
+    {
+      "id": 679,
+      "titulo": "2 nichos que estão muito em alta no Mercado Livre",
+      "status": "Pausada",
+      "data_coleta": "2025-12-25T16:34:58.404-03:00",
+      "custo": "135.11"
+    }
+  ],
+  "2 nichos que estão dando muito dinheiro no mercado livre": [
+    {
+      "id": 640,
+      "titulo": "2 nichos que estão dando muito dinheiro no Mercado Livre Reprovada \"Reprovada\" significa que nossas verificações de políticas do Google Ads encontraram uma violação que impede totalmente a veiculação dessa promoção. Essas violações geralmente estão relacionadas ao conteúdo do vídeo promovido. Analise as políticas abaixo para entender por que sua promoção foi reprovada. Declarações não confiáveis Remova do texto e do destino do anúncio qualquer descrição, declaração ou característica infundada sobre seu produto. Ler a política O que você pode fazer A maneira mais rápida de voltar com sua promoção é trocar o vídeo selecionado. Clique no ícone de lápis ao lado da miniatura do vídeo, acesse a página \"Detalhes da promoção\" e escolha outro conteúdo para usar. Em seguida, clique em \"Salvar\" para relançar a promoção e reenviá-la para a análise de conformidade. Próximas etapas Saiba mais",
+      "status": "Depois que você tocar em \"Salvar\", a campanha será analisada de novo pelo Google Ads para verificar se há violações. Essa análise costuma levar de 2 a 48 horas e será marcada como \"Pendente\" até ser concluída. Se a campanha for aprovada, será marcada como \"Ativa\". Se ainda violar as políticas do Google Ads, será marcada como \"Reprovada\" ou \"Ativa (limitada)\".",
+      "data_coleta": "2025-12-23T11:01:32.407-03:00",
+      "custo": "135.18"
+    },
+    {
+      "id": 604,
+      "titulo": "2 nichos que estão dando muito dinheiro no Mercado Livre",
+      "status": "Ativa",
+      "data_coleta": "2025-12-23T10:03:40.313-03:00",
+      "custo": "133.62"
+    },
+    {
+      "id": 567,
+      "titulo": "2 nichos que estão dando muito dinheiro no Mercado Livre –",
+      "status": "Ativa",
+      "data_coleta": "2025-12-23T09:36:39.03-03:00",
+      "custo": "44.15"
+    }
+  ]
+}
