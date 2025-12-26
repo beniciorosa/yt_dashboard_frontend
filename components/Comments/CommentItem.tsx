@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { CommentThread, replyToComment, rateComment, deleteComment } from '../../services/commentsService';
 import { VideoData } from '../../services/youtubeService';
-import { MessageSquare, ThumbsUp, Trash2, CornerDownRight, Loader2, PlaySquare, Wand2, Zap, MoreHorizontal, Check, X, Plus, ChevronLeft, Users } from 'lucide-react';
-import { generateAiReply, fetchQuickReplies, createQuickReply, deleteQuickReply, learnReply, QuickReply, fetchInteractionCount, TopCommenter } from '../../services/commentsService';
+import { MessageSquare, ThumbsUp, Trash2, CornerDownRight, Loader2, PlaySquare, Wand2, Zap, MoreHorizontal, Check, X, Plus, ChevronLeft, Users, Heart } from 'lucide-react';
+import { generateAiReply, fetchQuickReplies, createQuickReply, deleteQuickReply, learnReply, QuickReply, fetchInteractionCount, TopCommenter, toggleFavorite } from '../../services/commentsService';
 
 interface Props {
     thread: CommentThread;
@@ -11,14 +11,17 @@ interface Props {
     onDeleteSuccess: (threadId: string) => void;
     ranking?: TopCommenter[];
     onUsernameClick?: (username: string) => void;
+    onFavoriteToggle?: () => void;
+    isFavorited?: boolean;
 }
 
-export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, onDeleteSuccess, ranking = [], onUsernameClick }) => {
+export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, onDeleteSuccess, ranking = [], onUsernameClick, onFavoriteToggle, isFavorited: initialIsFavorited = false }) => {
     const { topLevelComment } = thread.snippet;
     const { snippet } = topLevelComment;
     const [isReplying, setIsReplying] = useState(false);
     const [replyText, setReplyText] = useState('');
-    const [isSending, setIsSending] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isFavorite, setIsFavorite] = useState(initialIsFavorited);
     const [isRating, setIsRating] = useState(false);
     // Local state for optimistic update
     const [viewerRating, setViewerRating] = useState<'like' | 'none'>(snippet.viewerRating);
@@ -103,7 +106,7 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
 
     const handleReply = async () => {
         if (!replyText.trim()) return;
-        setIsSending(true);
+        setIsSubmitting(true);
         try {
             const newReply = await replyToComment(topLevelComment.id, replyText);
 
@@ -119,7 +122,7 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
         } catch (error) {
             alert("Erro ao responder comentário.");
         } finally {
-            setIsSending(false);
+            setIsSubmitting(false);
         }
     };
 
@@ -255,22 +258,45 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
                     {/* Reply Button */}
                     <button
                         onClick={() => setIsReplying(!isReplying)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${isReplying
-                            ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
-                            : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200'
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${isReplying
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
+                            : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
                             }`}
                     >
                         <MessageSquare size={14} />
                         {isReplying ? 'Cancelar' : 'Responder'}
                     </button>
 
+                    <button
+                        onClick={async () => {
+                            const res = await toggleFavorite({
+                                comment_id: thread.id,
+                                author_name: snippet.authorDisplayName,
+                                author_profile_image: snippet.authorProfileImageUrl,
+                                content: snippet.textDisplay,
+                                video_id: snippet.videoId,
+                                video_title: video?.snippet?.title || 'Video'
+                            });
+                            setIsFavorite(res.favorited);
+                            onFavoriteToggle?.();
+                        }}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${isFavorite
+                            ? 'text-red-500 bg-red-50 dark:bg-red-900/20'
+                            : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                            }`}
+                        title={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                    >
+                        <Heart size={14} className={isFavorite ? 'fill-current' : ''} />
+                        {isFavorite ? 'Favorito' : 'Favoritar'}
+                    </button>
+
                     {/* Like Button */}
                     <button
                         onClick={handleRate}
                         disabled={isRating}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${viewerRating === 'like'
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${viewerRating === 'like'
                             ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
-                            : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200'
+                            : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
                             }`}
                         title={viewerRating === 'like' ? 'Remover like' : 'Curtir comentário'}
                     >
@@ -296,8 +322,14 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
                             <textarea
                                 value={replyText}
                                 onChange={(e) => setReplyText(e.target.value)}
-                                placeholder="Escreva uma resposta pública..."
-                                className="w-full p-4 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-y h-32 transition-shadow min-h-[100px]"
+                                onKeyDown={(e) => {
+                                    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                                        e.preventDefault();
+                                        if (replyText.trim() && !isSubmitting) handleReply();
+                                    }
+                                }}
+                                placeholder="Escreva sua resposta..."
+                                className="w-full p-4 text-sm border border-blue-200 dark:border-blue-900/50 rounded-xl bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none min-h-[120px] resize-y shadow-inner"
                                 autoFocus
                             />
 
@@ -416,10 +448,10 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
                                 <div>
                                     <button
                                         onClick={handleReply}
-                                        disabled={!replyText.trim() || isSending}
+                                        disabled={!replyText.trim() || isSubmitting}
                                         className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center gap-2"
                                     >
-                                        {isSending ? (
+                                        {isSubmitting ? (
                                             <>
                                                 <Loader2 size={12} className="animate-spin" />
                                                 Enviando...
@@ -427,6 +459,7 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
                                         ) : (
                                             <>
                                                 Responder
+                                                <span className="text-[10px] opacity-70 ml-1 hidden md:inline">Ctrl + Enter</span>
                                                 <CornerDownRight size={12} />
                                             </>
                                         )}

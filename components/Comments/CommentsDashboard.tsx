@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { CommentThread, fetchComments } from '../../services/commentsService';
 import { fetchVideoDetailsByIds, VideoData } from '../../services/youtubeService';
 import { CommentItem } from './CommentItem';
-import { MessageSquare, Filter, RefreshCw, Search, Loader2, PlaySquare, Trophy, User } from 'lucide-react';
-import { fetchTopCommenters, TopCommenter } from '../../services/commentsService';
+import { MessageSquare, Filter, RefreshCw, Search, Loader2, PlaySquare, Trophy, Heart } from 'lucide-react';
+import { fetchTopCommenters, TopCommenter, fetchFavorites } from '../../services/commentsService';
 import { CommentHistoryPanel } from './CommentHistoryPanel';
+import { FavoritesPanel } from './FavoritesPanel';
 
 export const CommentsDashboard: React.FC = () => {
     const [comments, setComments] = useState<CommentThread[]>([]);
@@ -22,8 +23,12 @@ export const CommentsDashboard: React.FC = () => {
 
     // Ranking & History
     const [topCommenters, setTopCommenters] = useState<TopCommenter[]>([]);
-    const [selectedUserForHistory, setSelectedUserForHistory] = useState<string | null>(null);
-    const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
+    const [historyUsername, setHistoryUsername] = useState<string | null>(null);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+    // Favorites State
+    const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
+    const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
     const loadComments = useCallback(async (reset = false, token?: string) => {
         if (reset) setIsLoading(true);
@@ -32,7 +37,7 @@ export const CommentsDashboard: React.FC = () => {
         let currentToken = token;
         let isResetting = reset;
         let attempts = 0;
-        const MAX_ATTEMPTS = 5; // Fetch up to 100 comments to find unreplied ones
+        const MAX_ATTEMPTS = 5;
         let shouldContinue = true;
 
         try {
@@ -71,37 +76,26 @@ export const CommentsDashboard: React.FC = () => {
                     }
                 }
 
-                // Update Comments State
-                // We use a functional update to ensure we append to the latest state correctly even inside loop
-                // Capture the current 'isResetting' status for this specific update
                 const resetForThisUpdate = isResetting;
                 setComments(prev => {
                     if (resetForThisUpdate) return validItems;
-
-                    // Simple distinct to avoid duplicates if any weird pagination overlap occurs
                     const existingIds = new Set(prev.map(c => c.id));
                     const uniqueNewItems = validItems.filter((i: any) => !existingIds.has(i.id));
                     return [...prev, ...uniqueNewItems];
                 });
 
                 setNextPageToken(data.nextPageToken);
-                currentToken = data.nextPageToken; // Update token for next iteration
-                isResetting = false; // Subsequent iterations act as append
+                currentToken = data.nextPageToken;
+                isResetting = false;
 
-                // DECISION: Should we fetch more?
                 if (showPendingOnly) {
-                    // Check if we found any unreplied items in this specific batch
                     const hasUnreplied = validItems.some((i: any) => i.snippet.totalReplyCount === 0);
-
                     if (hasUnreplied) {
-                        shouldContinue = false; // We found content! Stop auto-fetching.
+                        shouldContinue = false;
                     } else {
-                        // All items in this batch were replied to.
-                        // If we have a next page, loop again to fetch it automatically.
                         if (!currentToken) shouldContinue = false;
                     }
                 } else {
-                    // If filter is "All", one batch is enough.
                     shouldContinue = false;
                 }
             }
@@ -111,49 +105,48 @@ export const CommentsDashboard: React.FC = () => {
             setIsLoading(false);
             setIsLoadingMore(false);
         }
-    }, [filterOrder, searchTerms, showPendingOnly]);
+    }, [filterOrder, searchTerms, showPendingOnly, videoCache]);
 
-    const loadRanking = useCallback(async () => {
+    const loadRanking = async () => {
         try {
             const data = await fetchTopCommenters();
             setTopCommenters(data);
         } catch (e) {
             console.warn("Failed to load ranking", e);
         }
-    }, []);
+    };
 
-    // Initial Load & Filter Change
+    const loadFavoritesList = async () => {
+        try {
+            const data = await fetchFavorites();
+            setFavoriteIds(new Set(data.map(f => f.comment_id)));
+        } catch (e) {
+            console.warn("Failed to load favorites", e);
+        }
+    };
+
+    // Initial Load
     useEffect(() => {
         loadComments(true);
         loadRanking();
-    }, [filterOrder, searchTerms, loadRanking]);
+        loadFavoritesList();
+    }, [filterOrder, searchTerms]);
 
     const handleOpenHistory = (username: string) => {
-        setSelectedUserForHistory(username);
-        setIsHistoryPanelOpen(true);
+        setHistoryUsername(username);
+        setIsHistoryOpen(true);
     };
 
-    // Helper to check if unreplied
-    const isUnreplied = (thread: CommentThread) => {
-        // Simple check: no replies
-        if (thread.snippet.totalReplyCount === 0) return true;
-        // Advanced: Check if any reply is from me? 
-        // We don't easily know "my" channel ID here without auth context, 
-        // but typically unreplied means 0 replies for this dashboard context.
-        return false;
-    };
+    const isUnreplied = (thread: CommentThread) => thread.snippet.totalReplyCount === 0;
 
     const displayedComments = showPendingOnly
         ? comments.filter(c => isUnreplied(c))
         : comments;
 
     const handleReplySuccess = (threadId: string) => {
-        // If we are in "Pending Only" mode, remove it.
-        // If "All", just update data (increment reply count mock)
         if (showPendingOnly) {
             setComments(prev => prev.filter(c => c.id !== threadId));
         } else {
-            // Update local state to reflect it's replied (increment count)
             setComments(prev => prev.map(c => {
                 if (c.id === threadId) {
                     return {
@@ -176,7 +169,7 @@ export const CommentsDashboard: React.FC = () => {
     return (
         <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
             {/* Header */}
-            <div className="h-16 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 px-6 flex items-center justify-between shrink-0 z-10">
+            <div className="h-16 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 px-6 flex items-center justify-between shrink-0 z-10 transition-colors">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 rounded-lg">
                         <MessageSquare size={20} />
@@ -191,18 +184,29 @@ export const CommentsDashboard: React.FC = () => {
 
                 <div className="flex items-center gap-3">
                     <button
-                        onClick={() => loadComments(true)}
-                        className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-                        title="Atualizar"
+                        onClick={() => setIsFavoritesOpen(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg border border-red-100 dark:border-red-800 text-xs font-bold hover:bg-red-100 dark:hover:bg-red-900/30 transition-all shadow-sm"
                     >
-                        <RefreshCw size={18} />
+                        <Heart size={14} className="fill-current" />
+                        Favoritos
+                        {favoriteIds.size > 0 && (
+                            <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1 min-w-[18px] text-center">
+                                {favoriteIds.size}
+                            </span>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700 shadow-sm sm:shadow-none"
+                        title="Recarregar"
+                    >
+                        <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
                     </button>
                 </div>
             </div>
 
             {/* Filters Toolbar */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 flex flex-wrap gap-4 items-center justify-between">
-
+            <div className="p-4 border-b border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 flex flex-wrap gap-4 items-center justify-between backdrop-blur-md">
                 {/* Search */}
                 <div className="relative w-full md:w-96">
                     <input
@@ -210,23 +214,23 @@ export const CommentsDashboard: React.FC = () => {
                         placeholder="Filtrar por palavras-chave..."
                         value={searchTerms}
                         onChange={(e) => setSearchTerms(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-pink-500 outline-none"
+                        className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-pink-500 outline-none transition-all shadow-sm"
                     />
                     <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
                 </div>
 
                 {/* Filters */}
                 <div className="flex items-center gap-4">
-                    <div className="flex items-center bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-1">
+                    <div className="flex items-center bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-1 shadow-sm">
                         <button
                             onClick={() => setShowPendingOnly(true)}
-                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${showPendingOnly ? 'bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${showPendingOnly ? 'bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
                         >
                             Sem Resposta
                         </button>
                         <button
                             onClick={() => setShowPendingOnly(false)}
-                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${!showPendingOnly ? 'bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${!showPendingOnly ? 'bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
                         >
                             Todos
                         </button>
@@ -237,7 +241,7 @@ export const CommentsDashboard: React.FC = () => {
                         <select
                             value={filterOrder}
                             onChange={(e) => setFilterOrder(e.target.value as any)}
-                            className="pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-pink-500 outline-none appearance-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                            className="pl-9 pr-6 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-pink-500 outline-none appearance-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all shadow-sm"
                         >
                             <option value="time">Mais Recentes</option>
                             <option value="relevance">Mais Relevantes</option>
@@ -248,7 +252,7 @@ export const CommentsDashboard: React.FC = () => {
 
             {/* Top Commenters Ranking */}
             {topCommenters.length > 0 && (
-                <div className="shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 overflow-x-auto">
+                <div className="shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 overflow-x-auto shadow-sm">
                     <div className="max-w-5xl mx-auto flex items-center gap-6">
                         <div className="flex items-center gap-2 shrink-0">
                             <Trophy size={18} className="text-amber-500" />
@@ -289,7 +293,7 @@ export const CommentsDashboard: React.FC = () => {
                         <p className="text-sm">Carregando comentários...</p>
                     </div>
                 ) : (
-                    <div className="max-w-5xl mx-auto pb-20">
+                    <div className="max-w-5xl mx-auto pb-20 p-4">
                         {displayedComments.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-20 space-y-4 text-gray-400">
                                 <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-full">
@@ -314,22 +318,24 @@ export const CommentsDashboard: React.FC = () => {
                                     video={videoCache[thread.snippet.videoId]}
                                     onReplySuccess={() => {
                                         handleReplySuccess(thread.id);
-                                        loadRanking(); // Refresh ranking on reply
+                                        loadRanking();
+                                        loadFavoritesList();
                                     }}
                                     onDeleteSuccess={handleDeleteSuccess}
                                     ranking={topCommenters}
                                     onUsernameClick={handleOpenHistory}
+                                    isFavorited={favoriteIds.has(thread.id)}
+                                    onFavoriteToggle={loadFavoritesList}
                                 />
                             ))
                         )}
 
-                        {/* Load More Button - Visible if token exists, regardless of list empty state */}
                         {nextPageToken && (
                             <div className="p-6 flex justify-center">
                                 <button
                                     onClick={() => loadComments(false, nextPageToken)}
                                     disabled={isLoadingMore}
-                                    className="px-6 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
+                                    className="px-6 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center gap-2 shadow-sm"
                                 >
                                     {isLoadingMore && <Loader2 size={14} className="animate-spin" />}
                                     Carregar Mais Antigos
@@ -340,12 +346,16 @@ export const CommentsDashboard: React.FC = () => {
                 )}
             </div>
 
-
-            {/* History Panel */}
             <CommentHistoryPanel
-                isOpen={isHistoryPanelOpen}
-                onClose={() => setIsHistoryPanelOpen(false)}
-                username={selectedUserForHistory}
+                isOpen={isHistoryOpen}
+                onClose={() => setIsHistoryOpen(false)}
+                username={historyUsername}
+            />
+
+            <FavoritesPanel
+                isOpen={isFavoritesOpen}
+                onClose={() => setIsFavoritesOpen(false)}
+                onRefreshNeeded={loadFavoritesList}
             />
         </div>
     );

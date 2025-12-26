@@ -359,10 +359,21 @@ export interface TopCommenter {
 }
 
 export interface CommentHistoryEntry {
-    id: number;
+    id: string;
+    comment_id: string;
     username: string;
-    comment_text: string;
-    reply_text: string;
+    content: string;
+    created_at: string;
+}
+
+export interface FavoriteComment {
+    id: string;
+    comment_id: string;
+    author_name: string;
+    author_profile_image: string;
+    content: string;
+    video_id: string;
+    video_title: string;
     created_at: string;
 }
 
@@ -385,5 +396,31 @@ export const fetchUserHistory = async (username: string): Promise<CommentHistory
     } catch (error) {
         console.error(`Error fetching history for ${username}:`, error);
         return [];
+    }
+};
+
+export const fetchFavorites = async (): Promise<FavoriteComment[]> => {
+    try {
+        const res = await fetch(`${BACKEND_API_URL}/favorites`);
+        if (!res.ok) throw new Error("Failed to fetch favorites");
+        return await res.json();
+    } catch (error) {
+        console.error("Error fetching favorites:", error);
+        return [];
+    }
+};
+
+export const toggleFavorite = async (commentData: any): Promise<{ favorited: boolean }> => {
+    try {
+        const res = await fetch(`${BACKEND_API_URL}/favorites/toggle`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(commentData)
+        });
+        if (!res.ok) throw new Error("Failed to toggle favorite");
+        return await res.json();
+    } catch (error) {
+        console.error("Error toggling favorite:", error);
+        return { favorited: false };
     }
 };
