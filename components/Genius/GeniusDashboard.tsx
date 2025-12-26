@@ -94,7 +94,7 @@ export const GeniusDashboard: React.FC = () => {
                     <div className="p-6 bg-purple-50 dark:bg-purple-900/20 rounded-3xl border border-purple-100 dark:border-purple-800/50">
                         <h4 className="font-bold text-purple-900 dark:text-purple-100 mb-2">Como o Genius pensa?</h4>
                         <p className="text-xs text-purple-700 dark:text-purple-300 leading-relaxed">
-                            Nós utilizamos a tecnologia da <b>OpenAI (ChatGPT)</b>. O Genius analisa profundamente suas interações passadas buscando conexões e padrões para encontrar o que realmente importa para a sua audiência.
+                            Nós utilizamos a tecnologia da <b>OpenAI GPT-5.2 Pro</b>. O Genius analisa profundamente todo o seu histórico buscando conexões neurais avançadas para projetar o futuro do seu canal.
                         </p>
                     </div>
                 </div>
@@ -109,7 +109,7 @@ export const GeniusDashboard: React.FC = () => {
                             </div>
                             <h3 className="text-xl font-bold dark:text-white">Conectando Neurônios...</h3>
                             <p className="text-gray-500 dark:text-gray-400 text-center max-w-xs">
-                                Lendo suas últimas 100 interações e buscando padrões para suas próximas ideias de vídeo.
+                                Lendo seu histórico completo de interações e buscando padrões para suas próximas ideias de vídeo.
                             </p>
                         </div>
                     ) : error ? (
