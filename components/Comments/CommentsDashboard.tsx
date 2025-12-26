@@ -256,7 +256,7 @@ export const CommentsDashboard: React.FC = () => {
                     <div className="max-w-5xl mx-auto flex items-center gap-6">
                         <div className="flex items-center gap-2 shrink-0">
                             <Trophy size={18} className="text-amber-500" />
-                            <span className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Top 5 Commenters:</span>
+                            <span className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Top 5 Espectadores:</span>
                         </div>
                         <div className="flex items-center gap-4 flex-1">
                             {topCommenters.map((user, idx) => (
@@ -266,9 +266,9 @@ export const CommentsDashboard: React.FC = () => {
                                     className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full border border-gray-100 dark:border-gray-700 transition-all group shrink-0"
                                 >
                                     <span className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${idx === 0 ? 'bg-amber-100 text-amber-600' :
-                                            idx === 1 ? 'bg-slate-200 text-slate-600' :
-                                                idx === 2 ? 'bg-orange-100 text-orange-600' :
-                                                    'bg-gray-100 text-gray-500'
+                                        idx === 1 ? 'bg-slate-200 text-slate-600' :
+                                            idx === 2 ? 'bg-orange-100 text-orange-600' :
+                                                'bg-gray-100 text-gray-500'
                                         }`}>
                                         {idx + 1}
                                     </span>
