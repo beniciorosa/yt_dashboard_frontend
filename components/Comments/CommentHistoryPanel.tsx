@@ -38,16 +38,8 @@ export const CommentHistoryPanel: React.FC<Props> = ({ isOpen, onClose, username
     const formatDate = (dateStr: string) => {
         if (!dateStr) return '';
         try {
-            // Tratamento para garantir que o JS entenda como UTC se não houver fuso
-            let normalized = dateStr;
-            if (normalized.includes(' ') && !normalized.includes('T')) {
-                normalized = normalized.replace(' ', 'T');
-            }
-            if (!normalized.includes('Z') && !normalized.includes('+') && !normalized.includes('-')) {
-                normalized += 'Z';
-            }
-
-            const date = new Date(normalized);
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return dateStr;
 
             return new Intl.DateTimeFormat('pt-BR', {
                 timeZone: 'America/Sao_Paulo',
@@ -59,7 +51,6 @@ export const CommentHistoryPanel: React.FC<Props> = ({ isOpen, onClose, username
                 hour12: false
             }).format(date);
         } catch (e) {
-            console.error("Format date error:", e);
             return dateStr;
         }
     };
