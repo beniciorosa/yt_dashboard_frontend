@@ -11,6 +11,16 @@ interface Props {
 export const FavoritesPanel: React.FC<Props> = ({ isOpen, onClose, onRefreshNeeded }) => {
     const [favorites, setFavorites] = useState<FavoriteComment[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+    const toggleExpand = (id: string) => {
+        setExpandedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
 
     const loadFavorites = async () => {
         setIsLoading(true);
@@ -71,42 +81,69 @@ export const FavoritesPanel: React.FC<Props> = ({ isOpen, onClose, onRefreshNeed
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {favorites.map((fav) => (
-                            <div key={fav.id} className="group p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700/50 hover:border-red-200 dark:hover:border-red-900/30 transition-all">
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <img src={fav.author_profile_image} className="w-6 h-6 rounded-full" />
-                                        <span className="text-xs font-bold text-gray-900 dark:text-gray-100">{fav.author_name}</span>
+                        {favorites.map((fav) => {
+                            const isExpanded = expandedIds.has(fav.id);
+                            return (
+                                <div key={fav.id} className="group p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700/50 hover:border-red-200 dark:hover:border-red-900/30 transition-all">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <img src={fav.author_profile_image} className="w-6 h-6 rounded-full" />
+                                            <span className="text-xs font-bold text-gray-900 dark:text-gray-100">{fav.author_name}</span>
+                                        </div>
+                                        <button
+                                            onClick={() => handleRemove(fav)}
+                                            className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                                            title="Remover dos favoritos"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
                                     </div>
-                                    <button
-                                        onClick={() => handleRemove(fav)}
-                                        className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                                        title="Remover dos favoritos"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
-                                <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-3 mb-3" dangerouslySetInnerHTML={{ __html: fav.content }} />
 
-                                <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
-                                    <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium truncate max-w-[150px]">
-                                        {fav.video_title}
-                                    </span>
-                                    <a
-                                        href={`https://www.youtube.com/watch?v=${fav.video_id}&lc=${fav.comment_id}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-1.5 px-2.5 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-[10px] font-bold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
-                                    >
-                                        <PlaySquare size={12} />
-                                        Ver no YT
-                                    </a>
+                                    <div
+                                        className={`text-sm text-gray-700 dark:text-gray-300 leading-relaxed cursor-pointer transition-all duration-300 ${isExpanded ? '' : 'line-clamp-3'}`}
+                                        dangerouslySetInnerHTML={{ __html: fav.content }}
+                                        onClick={() => toggleExpand(fav.id)}
+                                    />
+
+                                    {!isExpanded && fav.content.length > 100 && (
+                                        <button
+                                            onClick={() => toggleExpand(fav.id)}
+                                            className="text-[10px] font-bold text-blue-600 hover:text-blue-700 mt-1 block"
+                                        >
+                                            Ver texto completo...
+                                        </button>
+                                    )}
+
+                                    {isExpanded && (
+                                        <button
+                                            onClick={() => toggleExpand(fav.id)}
+                                            className="text-[10px] font-bold text-gray-400 hover:text-gray-500 mt-2 block"
+                                        >
+                                            Recolher
+                                        </button>
+                                    )}
+
+                                    <div className="flex items-center justify-between pt-3 mt-3 border-t border-gray-100 dark:border-gray-700">
+                                        <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium truncate max-w-[150px]">
+                                            {fav.video_title}
+                                        </span>
+                                        <a
+                                            href={`https://www.youtube.com/watch?v=${fav.video_id}&lc=${fav.comment_id}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1.5 px-2.5 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-[10px] font-bold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all shadow-sm"
+                                        >
+                                            <PlaySquare size={12} />
+                                            Ver no YT
+                                        </a>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>
         </div>
     );
 };
+```
