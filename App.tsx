@@ -191,7 +191,7 @@ const App: React.FC = () => {
             {activeModule === 'users' && 'Gestão de Usuários'}
           </h2>
           <div className="flex items-center gap-4">
-            <span className="text-xs text-gray-400 hidden md:inline">v1.9.0 (Protected)</span>
+            <span className="text-xs text-gray-400 hidden md:inline">v1.9.1 (Protected)</span>
           </div>
         </header>
 
