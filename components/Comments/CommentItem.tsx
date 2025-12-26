@@ -210,24 +210,29 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
                 {/* Header: Author & Time */}
                 <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                     <span
-                        className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate hover:underline cursor-pointer"
+                        className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate hover:underline cursor-pointer transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                         onClick={() => onUsernameClick?.(snippet.authorDisplayName)}
+                        title="Ver histórico de interações"
                     >
                         {snippet.authorDisplayName}
                     </span>
 
                     {interactionCount > 0 && (
-                        <div className="flex items-center gap-1 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-[10px] font-medium border border-green-200 dark:border-green-800/50" title={`${interactionCount} interações anteriores`}>
+                        <button
+                            onClick={() => onUsernameClick?.(snippet.authorDisplayName)}
+                            className="flex items-center gap-1 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-[10px] font-medium border border-green-200 dark:border-green-800/50 hover:bg-green-200 dark:hover:bg-green-800 transition-colors cursor-pointer"
+                            title={`Clique para ver as ${interactionCount} interações anteriores`}
+                        >
                             <Users size={10} />
                             {interactionCount} interações
-                        </div>
+                        </button>
                     )}
 
                     {userRank > 0 && userRank <= 5 && (
                         <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${userRank === 1 ? 'bg-amber-100 text-amber-600 border-amber-200' :
-                                userRank === 2 ? 'bg-slate-100 text-slate-600 border-slate-200' :
-                                    userRank === 3 ? 'bg-orange-100 text-orange-600 border-orange-200' :
-                                        'bg-blue-100 text-blue-600 border-blue-200'
+                            userRank === 2 ? 'bg-slate-100 text-slate-600 border-slate-200' :
+                                userRank === 3 ? 'bg-orange-100 text-orange-600 border-orange-200' :
+                                    'bg-blue-100 text-blue-600 border-blue-200'
                             }`} title={`Top ${userRank} Commenter`}>
                             #{userRank} TOP
                         </div>
