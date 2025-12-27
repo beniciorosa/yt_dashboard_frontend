@@ -47,13 +47,13 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
 
     const userRank = ranking.findIndex(u => u.username === snippet.authorDisplayName) + 1;
 
-    const handleAiReply = async () => {
+    const handleAiReply = async (provider: 'openai' | 'gemini') => {
         setIsGeneratingAi(true);
         try {
-            const reply = await generateAiReply(snippet.textOriginal, video?.title, aiStyle, snippet.authorDisplayName);
+            const reply = await generateAiReply(snippet.textOriginal, video?.title, aiStyle, snippet.authorDisplayName, provider);
             setReplyText(reply);
         } catch (error) {
-            alert("Erro ao gerar resposta com IA.");
+            alert(`Erro ao gerar resposta com ${provider === 'gemini' ? 'Gemini' : 'IA'}.`);
         } finally {
             setIsGeneratingAi(false);
         }
@@ -338,13 +338,23 @@ export const CommentItem: React.FC<Props> = ({ thread, video, onReplySuccess, on
                                 {/* Left: AI & Quick Tools */}
                                 <div className="flex gap-2 relative">
                                     <button
-                                        onClick={handleAiReply}
+                                        onClick={() => handleAiReply('openai')}
                                         disabled={isGeneratingAi}
                                         className="p-1.5 text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-medium"
-                                        title="Gerar resposta com IA"
+                                        title="Gerar com GPT-5.2 Pro"
                                     >
                                         {isGeneratingAi ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
-                                        <span className="hidden sm:inline">IA Reply</span>
+                                        <span className="hidden sm:inline">IA Reply GPT-5.2 Pro</span>
+                                    </button>
+
+                                    <button
+                                        onClick={() => handleAiReply('gemini')}
+                                        disabled={isGeneratingAi}
+                                        className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-medium"
+                                        title="Gerar com Gemini 3 Flash"
+                                    >
+                                        {isGeneratingAi ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+                                        <span className="hidden sm:inline">IA Reply Gemini</span>
                                     </button>
 
                                     <div className="relative">

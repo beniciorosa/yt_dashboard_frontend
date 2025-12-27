@@ -281,12 +281,12 @@ export const rateComment = async (commentId: string, rating: 'like' | 'none'): P
 
 // --- AI & Quick Replies ---
 
-export const generateAiReply = async (commentText: string, videoTitle?: string, style: string = 'professional', authorName?: string): Promise<string> => {
+export const generateAiReply = async (commentText: string, videoTitle?: string, style: string = 'professional', authorName?: string, provider: 'openai' | 'gemini' = 'openai'): Promise<string> => {
     try {
         const res = await fetch(`${BACKEND_API_URL}/generate-reply`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ commentText, videoTitle, style, authorName })
+            body: JSON.stringify({ commentText, videoTitle, style, authorName, provider })
         });
 
         if (!res.ok) {
