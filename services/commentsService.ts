@@ -170,28 +170,35 @@ export const deleteComment = async (commentId: string): Promise<boolean> => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 token: token,
-                method: 'DELETE', // Method for Google API
-                endpoint: endpoint,
-                params: params,
+                method: 'DELETE',
+                endpoint: 'comments',
+                params: { id: commentId },
             })
         });
 
         if (!res.ok) {
-            console.warn("DELETE failed, trying setModerationStatus=rejected as fallback...", await res.text());
-            // Fallback: Try to reject the comment
-            return await setCommentModerationStatus(commentId, 'rejected');
+            console.warn("DELETE via 'comments' failed, trying 'commentThreads'...");
+            const res2 = await fetch(PROXY_ACTION_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: token,
+                    method: 'DELETE',
+                    endpoint: 'commentThreads',
+                    params: { id: commentId },
+                })
+            });
+
+            if (!res2.ok) {
+                console.warn("DELETE via 'commentThreads' also failed, trying setModerationStatus=rejected...");
+                return await setCommentModerationStatus(commentId, 'rejected');
+            }
         }
 
         return true;
     } catch (e) {
         console.error("Exception in deleteComment:", e);
-        // Fallback catch-all
-        try {
-            return await setCommentModerationStatus(commentId, 'rejected');
-        } catch (e2) {
-            console.error("Fallback rejection also failed:", e2);
-            return false;
-        }
+        return await setCommentModerationStatus(commentId, 'rejected');
     }
 };
 
@@ -202,13 +209,15 @@ export const setCommentModerationStatus = async (commentId: string, status: 'hel
     const token = await getAccessToken();
     if (!token) throw new Error("Authentication required");
 
-    const url = `${BASE_URL}/comments/setModerationStatus?id=${commentId}&moderationStatus=${status}`;
-
-    const res = await fetch(url, {
+    const res = await fetch(PROXY_ACTION_URL, {
         method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            token: token,
+            method: 'POST',
+            endpoint: 'comments/setModerationStatus',
+            params: { id: commentId, moderationStatus: status }
+        })
     });
 
     if (!res.ok) {
