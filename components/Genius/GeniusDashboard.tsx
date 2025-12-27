@@ -124,7 +124,13 @@ export const GeniusDashboard: React.FC = () => {
                                     <Sparkles size={16} />
                                     Resultado da Análise
                                 </div>
-                                <div dangerouslySetInnerHTML={{ __html: formatMarkdown(insight.ideas) }} className="genius-content" />
+                                {insight.ideas ? (
+                                    <div dangerouslySetInnerHTML={{ __html: formatMarkdown(insight.ideas) }} className="genius-content" />
+                                ) : (
+                                    <div className="text-center py-12 text-gray-500 italic">
+                                        A IA processou os dados mas não conseguiu gerar insights conclusivos. Tente novamente ou mude o filtro.
+                                    </div>
+                                )}
                             </div>
 
                             <div className="flex items-center justify-center gap-2 text-[10px] text-gray-400 uppercase tracking-widest font-bold">
