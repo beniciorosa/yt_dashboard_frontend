@@ -1,8 +1,28 @@
 
 import React, { useEffect, useState } from 'react';
-import { fetchSalesDashboardData, SalesRankingItem, SalesSummary } from '../../services/salesMetricsService';
+import {
+    fetchSalesDashboardData,
+    fetchTopVideos,
+    fetchTopVendedores,
+    SalesRankingItem,
+    SalesSummary,
+    TopVideoItem,
+    TopVendedorItem,
+} from '../../services/salesMetricsService';
 import { SalesDetailsModal } from './SalesDetailsModal';
-import { DollarSign, BarChart2, TrendingUp, ShoppingBag, ArrowUpRight, Search, Calendar } from 'lucide-react';
+import { DollarSign, BarChart2, TrendingUp, ShoppingBag, ArrowUpRight, Search, Calendar, Trophy, Users } from 'lucide-react';
+
+const formatBRL = (value: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+
+const toYMD = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+};
+
+const rankColors = ['text-amber-500', 'text-gray-400', 'text-orange-600', 'text-gray-400', 'text-gray-400'];
 
 export const SalesMetricsDashboard: React.FC = () => {
     const [summary, setSummary] = useState<SalesSummary | null>(null);
@@ -11,17 +31,50 @@ export const SalesMetricsDashboard: React.FC = () => {
     const [selectedVideo, setSelectedVideo] = useState<SalesRankingItem | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [period, setPeriod] = useState('month');
+    const [customStart, setCustomStart] = useState('');
+    const [customEnd, setCustomEnd] = useState('');
 
+    // Painéis "Top 5" — sempre todo o período (independem da data selecionada)
+    const [topVideos, setTopVideos] = useState<TopVideoItem[]>([]);
+    const [topVendedores, setTopVendedores] = useState<TopVendedorItem[]>([]);
+    const [loadingTop, setLoadingTop] = useState(true);
+
+    // Carrega os painéis "Top 5" uma única vez (all-time)
     useEffect(() => {
+        const loadTop = async () => {
+            setLoadingTop(true);
+            const [tv, ts] = await Promise.all([fetchTopVideos(5), fetchTopVendedores(5)]);
+            setTopVideos(tv);
+            setTopVendedores(ts);
+            setLoadingTop(false);
+        };
+        loadTop();
+    }, []);
+
+    // Dashboard (respeita o período selecionado / datas personalizadas)
+    useEffect(() => {
+        // No modo personalizado, só busca quando as duas datas estiverem preenchidas
+        if (period === 'custom' && (!customStart || !customEnd)) return;
+
         const load = async () => {
             setLoading(true);
-            const data = await fetchSalesDashboardData(period);
+            const data = await fetchSalesDashboardData(period, customStart, customEnd);
             setSummary(data?.summary || { totalRevenue: 0, totalDeals: 0, totalWon: 0, conversionRate: 0 });
             setRanking(data?.ranking || []);
             setLoading(false);
         };
         load();
-    }, [period]);
+    }, [period, customStart, customEnd]);
+
+    const handlePeriodChange = (val: string) => {
+        if (val === 'custom' && !customStart && !customEnd) {
+            const now = new Date();
+            const first = new Date(now.getFullYear(), now.getMonth(), 1);
+            setCustomStart(toYMD(first));
+            setCustomEnd(toYMD(now));
+        }
+        setPeriod(val);
+    };
 
     const filteredRanking = ranking.filter(item =>
         item.videoTitle.toLowerCase().includes(searchTerm.toLowerCase())
@@ -45,6 +98,12 @@ export const SalesMetricsDashboard: React.FC = () => {
         </div>
     );
 
+    const RankBadge = ({ index }: { index: number }) => (
+        <div className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-sm font-bold bg-gray-100 dark:bg-gray-700/60 ${rankColors[index] || 'text-gray-400'}`}>
+            {index + 1}
+        </div>
+    );
+
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* Header */}
@@ -59,23 +118,46 @@ export const SalesMetricsDashboard: React.FC = () => {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-1.5 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                    <div className="p-2 text-gray-400">
-                        <Calendar size={18} />
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-1.5 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                        <div className="p-2 text-gray-400">
+                            <Calendar size={18} />
+                        </div>
+                        <select
+                            value={period}
+                            onChange={(e) => handlePeriodChange(e.target.value)}
+                            className="bg-transparent text-sm font-medium text-gray-700 dark:text-gray-200 focus:outline-none pr-8 cursor-pointer"
+                        >
+                            <option value="today">Hoje</option>
+                            <option value="week">Semana atual</option>
+                            <option value="month">Mês atual</option>
+                            <option value="30days">Últimos 30 dias</option>
+                            <option value="60days">Últimos 60 dias</option>
+                            <option value="year">Este ano</option>
+                            <option value="all">Todo o período</option>
+                            <option value="custom">Personalizado</option>
+                        </select>
                     </div>
-                    <select
-                        value={period}
-                        onChange={(e) => setPeriod(e.target.value)}
-                        className="bg-transparent text-sm font-medium text-gray-700 dark:text-gray-200 focus:outline-none pr-8 cursor-pointer"
-                    >
-                        <option value="today">Hoje</option>
-                        <option value="week">Semana atual</option>
-                        <option value="month">Mês atual</option>
-                        <option value="30days">Últimos 30 dias</option>
-                        <option value="60days">Últimos 60 dias</option>
-                        <option value="year">Este ano</option>
-                        <option value="all">Todo o período</option>
-                    </select>
+
+                    {period === 'custom' && (
+                        <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-1.5 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                            <input
+                                type="date"
+                                value={customStart}
+                                max={customEnd || undefined}
+                                onChange={(e) => setCustomStart(e.target.value)}
+                                className="bg-transparent text-sm font-medium text-gray-700 dark:text-gray-200 focus:outline-none px-2 cursor-pointer"
+                            />
+                            <span className="text-gray-400 text-sm">até</span>
+                            <input
+                                type="date"
+                                value={customEnd}
+                                min={customStart || undefined}
+                                onChange={(e) => setCustomEnd(e.target.value)}
+                                className="bg-transparent text-sm font-medium text-gray-700 dark:text-gray-200 focus:outline-none px-2 cursor-pointer"
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -83,7 +165,7 @@ export const SalesMetricsDashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
                     title="Receita Total"
-                    value={loading ? '-' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(summary?.totalRevenue || 0)}
+                    value={loading ? '-' : formatBRL(summary?.totalRevenue || 0)}
                     icon={DollarSign}
                     colorClass="text-emerald-500"
                     subtext="Gerado por links rastreados"
@@ -109,6 +191,92 @@ export const SalesMetricsDashboard: React.FC = () => {
                     colorClass="text-amber-500"
                     subtext="Leads p/ Venda"
                 />
+            </div>
+
+            {/* Top 5 panels (sempre todo o período) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* TOP 5 VÍDEOS */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col">
+                    <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                        <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                            <Trophy className="w-5 h-5 text-amber-500" />
+                            Top 5 Vídeos
+                        </h2>
+                        <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 bg-gray-50 dark:bg-gray-900/50 px-2 py-1 rounded-md">
+                            Todo o período
+                        </span>
+                    </div>
+                    <div className="p-3 divide-y divide-gray-100 dark:divide-gray-700/60">
+                        {loadingTop ? (
+                            Array.from({ length: 5 }).map((_, i) => (
+                                <div key={i} className="flex items-center gap-3 p-2 animate-pulse">
+                                    <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700"></div>
+                                    <div className="w-16 h-10 rounded bg-gray-200 dark:bg-gray-700"></div>
+                                    <div className="flex-1 h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                                </div>
+                            ))
+                        ) : topVideos.length === 0 ? (
+                            <div className="p-6 text-center text-gray-400 text-sm">Nenhum dado encontrado.</div>
+                        ) : (
+                            topVideos.map((v, i) => (
+                                <div key={v.videoId} className="flex items-center gap-3 p-2">
+                                    <RankBadge index={i} />
+                                    <div className="w-16 h-10 rounded overflow-hidden bg-gray-200 shrink-0">
+                                        {v.thumbnailUrl ? (
+                                            <img src={v.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-[9px] text-gray-400">No IMG</div>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{v.videoTitle}</h3>
+                                        <div className="text-[11px] text-gray-400">{v.wonCount} vendas</div>
+                                    </div>
+                                    <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 shrink-0">{formatBRL(v.totalRevenue)}</div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+
+                {/* TOP 5 VENDEDORES */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col">
+                    <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                        <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                            <Users className="w-5 h-5 text-indigo-500" />
+                            Top 5 Vendedores
+                        </h2>
+                        <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 bg-gray-50 dark:bg-gray-900/50 px-2 py-1 rounded-md">
+                            Todo o período
+                        </span>
+                    </div>
+                    <div className="p-3 divide-y divide-gray-100 dark:divide-gray-700/60">
+                        {loadingTop ? (
+                            Array.from({ length: 5 }).map((_, i) => (
+                                <div key={i} className="flex items-center gap-3 p-2 animate-pulse">
+                                    <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700"></div>
+                                    <div className="flex-1 h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                                </div>
+                            ))
+                        ) : topVendedores.length === 0 ? (
+                            <div className="p-6 text-center text-gray-400 text-sm">Nenhum dado encontrado.</div>
+                        ) : (
+                            topVendedores.map((s, i) => (
+                                <div key={s.name + i} className="flex items-center gap-3 p-2">
+                                    <RankBadge index={i} />
+                                    <div className="w-9 h-9 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs font-bold shrink-0">
+                                        {s.name.split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{s.name}</h3>
+                                        <div className="text-[11px] text-gray-400">{s.wonCount} vendas · {s.dealsCount} leads</div>
+                                    </div>
+                                    <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 shrink-0">{formatBRL(s.revenue)}</div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* Ranking Table */}
@@ -197,7 +365,7 @@ export const SalesMetricsDashboard: React.FC = () => {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="text-sm font-bold text-gray-900 dark:text-white">
-                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.totalRevenue)}
+                                                {formatBRL(item.totalRevenue)}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
@@ -222,6 +390,8 @@ export const SalesMetricsDashboard: React.FC = () => {
                     videoId={selectedVideo.videoId}
                     videoTitle={selectedVideo.videoTitle}
                     period={period}
+                    customStart={customStart}
+                    customEnd={customEnd}
                     onClose={() => setSelectedVideo(null)}
                 />
             )}

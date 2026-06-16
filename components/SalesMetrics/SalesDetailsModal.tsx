@@ -8,6 +8,8 @@ interface Props {
     videoId: string;
     videoTitle: string;
     period: string;
+    customStart?: string;
+    customEnd?: string;
     onClose: () => void;
 }
 
@@ -89,7 +91,7 @@ const formatStateName = (val: string): string => {
     return toTitleCase(val);
 };
 
-export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, period, onClose }) => {
+export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, period, customStart, customEnd, onClose }) => {
     const [deals, setDeals] = useState<any[]>([]);
     const [videoData, setVideoData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -112,13 +114,13 @@ export const SalesDetailsModal: React.FC<Props> = ({ videoId, videoTitle, period
     useEffect(() => {
         const load = async () => {
             setLoading(true);
-            const { video, deals: dealsData } = await fetchDealsByVideo(videoId, period);
+            const { video, deals: dealsData } = await fetchDealsByVideo(videoId, period, customStart, customEnd);
             setDeals(dealsData);
             setVideoData(video);
             setLoading(false);
         };
         if (videoId) load();
-    }, [videoId, period]);
+    }, [videoId, period, customStart, customEnd]);
 
     // --- Metrics for Chart ---
     // MAPPING: dealstage -> etapa, amount -> valor, products -> item_linha
