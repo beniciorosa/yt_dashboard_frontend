@@ -46,6 +46,65 @@ const buildPeriodQuery = (period: string, start?: string, end?: string): string 
     return `period=${encodeURIComponent(period)}`;
 };
 
+// ===== Análises (comparação de períodos) =====
+export interface AnalysisParams {
+    periodA: string; startA?: string; endA?: string;
+    periodB: string; startB?: string; endB?: string;
+    sellerScope: 'youtube' | 'all';
+}
+
+export interface AnalysisKpi { revenue: number; leads: number; won: number; conversionRate: number; avgTicket: number; }
+export interface VideoMover {
+    videoId: string; videoTitle: string; thumbnailUrl: string;
+    a: AnalysisKpi; b: AnalysisKpi;
+    deltaRevenue: number; deltaLeads: number; deltaLeadsPct: number;
+    status: string; lastLeadDate: string | null; lastWonDate: string | null;
+}
+export interface SellerMover {
+    name: string; a: AnalysisKpi; b: AnalysisKpi;
+    deltaRevenue: number; deltaLeads: number; deltaConversion: number; status: string;
+}
+export interface AnalysisResult {
+    ranges: { a: { start: string | null; end: string | null }; b: { start: string | null; end: string | null } };
+    sellerScope: string;
+    kpis: { a: AnalysisKpi; b: AnalysisKpi; delta: { revenue: number; leads: number; won: number; conversionRate: number; avgTicket: number } };
+    videoMovers: VideoMover[];
+    sellerMovers: SellerMover[];
+    timeline: { a: { date: string; leads: number; revenue: number }[]; b: { date: string; leads: number; revenue: number }[] };
+    insights: { type: string; severity: 'positive' | 'negative' | 'neutral'; text: string }[];
+}
+
+export const fetchSalesAnalysis = async (p: AnalysisParams): Promise<AnalysisResult | null> => {
+    try {
+        const qs = new URLSearchParams();
+        qs.set('periodA', p.periodA); qs.set('periodB', p.periodB); qs.set('sellerScope', p.sellerScope);
+        if (p.startA) qs.set('startA', p.startA); if (p.endA) qs.set('endA', p.endA);
+        if (p.startB) qs.set('startB', p.startB); if (p.endB) qs.set('endB', p.endB);
+        const res = await fetch(`${API_BASE_URL}/api/sales/analysis?${qs.toString()}`);
+        if (!res.ok) throw new Error('Failed to fetch analysis');
+        return await res.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
+export const fetchAiSummary = async (analysis: AnalysisResult): Promise<string> => {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/sales/analysis/ai-summary`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(analysis),
+        });
+        if (!res.ok) throw new Error('Failed to fetch AI summary');
+        const data = await res.json();
+        return data.summary || '';
+    } catch (error) {
+        console.error(error);
+        throw error;
+    }
+};
+
 // Sempre todo o período (ignora a data selecionada na tela)
 export const fetchTopVideos = async (limit = 5): Promise<TopVideoItem[]> => {
     try {

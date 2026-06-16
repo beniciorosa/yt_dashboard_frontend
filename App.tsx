@@ -7,7 +7,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { UtmGenerator } from './components/UtmGenerator';
 import { CommentsDashboard } from './components/Comments/CommentsDashboard';
 import { PromotionsDashboard } from './components/Promotions/PromotionsDashboard';
-import { SalesMetricsDashboard } from './components/SalesMetrics/SalesMetricsDashboard';
+import { SalesModule } from './components/SalesMetrics/SalesModule';
 import { UserManagement } from './components/Admin/UserManagement';
 import { GeniusDashboard } from './components/Genius/GeniusDashboard';
 import { Login } from './components/Login';
@@ -204,7 +204,7 @@ const App: React.FC = () => {
           {activeModule === 'utm-gen' && <UtmGenerator />}
           {activeModule === 'comments' && <CommentsDashboard />}
           {activeModule === 'promotions' && <PromotionsDashboard />}
-          {activeModule === 'sales-metrics' && <SalesMetricsDashboard />}
+          {activeModule === 'sales-metrics' && <SalesModule />}
           {activeModule === 'users' && <UserManagement />}
           {activeModule === 'genius' && <GeniusDashboard />}
         </main>
