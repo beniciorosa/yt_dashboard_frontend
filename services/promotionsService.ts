@@ -115,21 +115,32 @@ const cleanPromotionRow = (p: any, meta?: { title: string; thumbnail_url: string
 
 export const fetchPromotions = async (): Promise<Promotion[]> => {
     try {
+        // 1. Última coleta = snapshot atual das promoções (igual ao que está no Studio agora)
+        const { data: maxRow, error: maxErr } = await supabase
+            .from('yt_promotions')
+            .select('data_coleta')
+            .order('data_coleta', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+        if (maxErr) { console.error('Error fetching promotions:', maxErr); throw maxErr; }
+        const maxColeta = (maxRow as any)?.data_coleta;
+        if (!maxColeta) return [];
+
+        // 2. TODAS as campanhas desse batch (cada linha = 1 campanha, sem agrupar por vídeo —
+        //    assim o total bate com o gasto real e nenhuma campanha fica escondida)
         const { data, error } = await supabase
             .from('yt_promotions')
             .select('*')
-            .order('data_coleta', { ascending: false });
-
+            .eq('data_coleta', maxColeta);
         if (error) {
             console.error('Error fetching promotions:', error);
             throw error;
         }
         if (!data || data.length === 0) return [];
 
-        // 1. Extrai o video_id real de cada linha pela thumbnail
         const rows = data.map((item: any) => ({ ...item, _videoId: extractVideoId(item.thumbnail_url) }));
 
-        // 2. Busca metadados reais (título/thumb) dos vídeos mapeados
+        // 3. Títulos/thumbs reais dos vídeos mapeados
         const ids = Array.from(new Set(rows.map(r => r._videoId).filter(Boolean))) as string[];
         const videoMeta = new Map<string, { title: string; thumbnail_url: string }>();
         if (ids.length > 0) {
@@ -140,19 +151,8 @@ export const fetchPromotions = async (): Promise<Promotion[]> => {
             (vids || []).forEach((v: any) => videoMeta.set(v.video_id, { title: v.title, thumbnail_url: v.thumbnail_url }));
         }
 
-        // 3. Agrupa por video_id (chave confiável) — independente do título do anúncio.
-        //    Fallback por título normalizado só para linhas sem thumbnail/ID.
-        //    Como já vem ordenado por data_coleta desc, o primeiro de cada chave é o mais recente.
-        const latestMap = new Map<string, any>();
-        rows.forEach((item: any) => {
-            const key = item._videoId ? `vid:${item._videoId}` : `title:${normalizeTitle(item.titulo)}`;
-            if (!latestMap.has(key)) latestMap.set(key, item);
-        });
-
-        // 4. Limpa e monta o resultado com o título real do vídeo
-        return Array.from(latestMap.values()).map((p: any) =>
-            cleanPromotionRow(p, p._videoId ? videoMeta.get(p._videoId) : undefined)
-        );
+        // 4. Limpa cada campanha com o título real do vídeo (mapeado pela thumbnail)
+        return rows.map((p: any) => cleanPromotionRow(p, p._videoId ? videoMeta.get(p._videoId) : undefined));
     } catch (error) {
         console.error('Error in fetchPromotions:', error);
         return [];
