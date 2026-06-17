@@ -173,6 +173,16 @@ export const fetchPromotionHistory = async (promotion: Pick<Promotion, 'videoId'
             query = query.gte('data_coleta', d.toISOString());
         }
 
+        // Filtra NO BANCO (evita o teto de 1000 linhas do PostgREST, que cortava o histórico
+        // numa tabela com ~1.5k linhas): por video_id embutido na thumbnail quando mapeado;
+        // senão, por título aproximado.
+        if (promotion.videoId) {
+            query = query.ilike('thumbnail_url', `%${promotion.videoId}%`);
+        } else if (promotion.adTitle || promotion.titulo) {
+            const t = (promotion.adTitle || promotion.titulo || '').slice(0, 20);
+            if (t) query = query.ilike('titulo', `%${t}%`);
+        }
+
         const { data, error } = await query;
         if (error) {
             console.error('Error fetching promotion history:', error);
