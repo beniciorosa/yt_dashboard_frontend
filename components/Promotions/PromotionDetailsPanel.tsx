@@ -60,7 +60,7 @@ export const PromotionDetailsPanel: React.FC<PromotionDetailsPanelProps> = ({ pr
         setLoading(true);
         try {
             const days = period === 'all' ? undefined : parseInt(period.replace('d', ''));
-            const data = await fetchPromotionHistory(promotion.titulo, days);
+            const data = await fetchPromotionHistory(promotion, days);
             setHistory(data);
         } catch (error) {
             console.error("Error loading history", error);

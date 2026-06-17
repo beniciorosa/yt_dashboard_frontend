@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { fetchPromotions, Promotion, getVideoThumbnail } from '../../services/promotionsService';
+import { fetchPromotions, Promotion } from '../../services/promotionsService';
 import { Loader2, TrendingUp, DollarSign, Eye, Video, User, RefreshCw, Filter, ArrowUpDown, ArrowUp, ArrowDown, Search, BarChart2, Tag, Calendar, Users, TrendingDown } from 'lucide-react';
 import { PromotionDetailsPanel } from './PromotionDetailsPanel';
 
@@ -68,10 +68,13 @@ export const PromotionsDashboard: React.FC = () => {
         // Filter by Status
         list = list.filter(p => isStatusMatch(p.status, statusFilter));
 
-        // Filter by Search Query
+        // Filter by Search Query (título real do vídeo OU título do anúncio)
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
-            list = list.filter(v => v.titulo.toLowerCase().includes(query));
+            list = list.filter(v =>
+                v.titulo.toLowerCase().includes(query) ||
+                (v.adTitle || '').toLowerCase().includes(query)
+            );
         }
 
         list.sort((a, b) => {
@@ -303,9 +306,16 @@ export const PromotionsDashboard: React.FC = () => {
                                                         </div>
                                                     )}
                                                 </div>
-                                                <span className="font-medium text-gray-900 dark:text-white line-clamp-2 text-sm group-hover:text-blue-600 transition-colors">
-                                                    {promo.titulo}
-                                                </span>
+                                                <div className="min-w-0">
+                                                    <span className="font-medium text-gray-900 dark:text-white line-clamp-2 text-sm group-hover:text-blue-600 transition-colors block">
+                                                        {promo.titulo}
+                                                    </span>
+                                                    {promo.adTitle && promo.adTitle !== promo.titulo && (
+                                                        <span className="text-[11px] text-gray-400 line-clamp-1 block" title={`Título do anúncio: ${promo.adTitle}`}>
+                                                            anúncio: {promo.adTitle}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
