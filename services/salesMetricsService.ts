@@ -105,6 +105,28 @@ export const fetchAiSummary = async (analysis: AnalysisResult): Promise<string> 
     }
 };
 
+// ===== ROI dos anúncios (Promoções × Vendas) =====
+export interface PromotionRoiItem {
+    videoId: string; videoTitle: string; thumbnailUrl: string;
+    campaigns: number; adSpend: number; promoViews: number; subsGained: number; impressions: number;
+    leads: number; won: number; revenue: number; roi: number; net: number; costPerLead: number; costPerSale: number;
+}
+export interface PromotionRoiResult {
+    rows: PromotionRoiItem[];
+    summary: { totalAdSpend: number; totalRevenue: number; roi: number; net: number; promotedVideos: number; lastColeta?: string };
+}
+
+export const fetchPromotionRoi = async (): Promise<PromotionRoiResult | null> => {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/sales/roi`);
+        if (!res.ok) throw new Error('Failed to fetch ROI');
+        return await res.json();
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
 // Sempre todo o período (ignora a data selecionada na tela)
 export const fetchTopVideos = async (limit = 5): Promise<TopVideoItem[]> => {
     try {

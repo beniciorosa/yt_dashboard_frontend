@@ -1,7 +1,8 @@
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { fetchPromotions, Promotion } from '../../services/promotionsService';
-import { Loader2, TrendingUp, DollarSign, Eye, Video, User, RefreshCw, Filter, ArrowUpDown, ArrowUp, ArrowDown, Search, BarChart2, Tag, Calendar, Users, TrendingDown } from 'lucide-react';
+import { fetchPromotionRoi, PromotionRoiResult } from '../../services/salesMetricsService';
+import { Loader2, TrendingUp, DollarSign, Eye, Video, User, RefreshCw, Filter, ArrowUpDown, ArrowUp, ArrowDown, Search, BarChart2, Tag, Calendar, Users, TrendingDown, ShoppingBag } from 'lucide-react';
 import { PromotionDetailsPanel } from './PromotionDetailsPanel';
 
 type DateFilterOption = '7d' | '14d' | '28d' | 'all';
@@ -17,6 +18,8 @@ export const PromotionsDashboard: React.FC = () => {
     const [sortKey, setSortKey] = useState<SortKey>('inscritos');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
     const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
+    const [roi, setRoi] = useState<PromotionRoiResult | null>(null);
+    const [loadingRoi, setLoadingRoi] = useState(true);
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -34,6 +37,14 @@ export const PromotionsDashboard: React.FC = () => {
 
     useEffect(() => {
         loadData();
+    }, []);
+
+    useEffect(() => {
+        (async () => {
+            setLoadingRoi(true);
+            setRoi(await fetchPromotionRoi());
+            setLoadingRoi(false);
+        })();
     }, []);
 
     const handleSort = (key: SortKey) => {
@@ -206,6 +217,82 @@ export const PromotionsDashboard: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* ROI: Ads × Vendas */}
+            {!loadingRoi && roi && roi.rows.length > 0 && (() => {
+                const brl = (n: number) => 'R$ ' + (n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const s = roi.summary;
+                return (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                                <div className="flex items-center gap-2 mb-2"><DollarSign size={16} className="text-blue-500" /><span className="text-xs text-gray-500">Investido em Ads</span></div>
+                                <div className="text-xl font-bold text-gray-900 dark:text-white">{brl(s.totalAdSpend)}</div>
+                            </div>
+                            <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                                <div className="flex items-center gap-2 mb-2"><ShoppingBag size={16} className="text-emerald-500" /><span className="text-xs text-gray-500">Receita atribuída (vendas)</span></div>
+                                <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{brl(s.totalRevenue)}</div>
+                            </div>
+                            <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                                <div className="flex items-center gap-2 mb-2"><BarChart2 size={16} className="text-indigo-500" /><span className="text-xs text-gray-500">ROI geral</span></div>
+                                <div className="text-xl font-bold text-gray-900 dark:text-white">{s.roi.toFixed(2)}x</div>
+                                <div className="text-[10px] text-gray-400 mt-0.5">{brl(s.roi)} por R$1 investido</div>
+                            </div>
+                            <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                                <div className="flex items-center gap-2 mb-2">{s.net >= 0 ? <TrendingUp size={16} className="text-emerald-500" /> : <TrendingDown size={16} className="text-red-500" />}<span className="text-xs text-gray-500">Resultado líquido</span></div>
+                                <div className={`text-xl font-bold ${s.net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{brl(s.net)}</div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                            <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                                <h2 className="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2"><TrendingUp size={18} className="text-emerald-500" /> Retorno dos Anúncios por Vídeo</h2>
+                                <span className="text-[10px] text-gray-400">vendas rastreadas (UTM) × gasto em ads · todo o período</span>
+                            </div>
+                            <div className="overflow-x-auto max-h-[28rem]">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500 sticky top-0">
+                                        <tr>
+                                            <th className="px-4 py-3">Vídeo</th>
+                                            <th className="px-4 py-3 text-right">Gasto Ads</th>
+                                            <th className="px-4 py-3 text-center">Inscritos</th>
+                                            <th className="px-4 py-3 text-center">Leads</th>
+                                            <th className="px-4 py-3 text-center">Vendas</th>
+                                            <th className="px-4 py-3 text-right">Receita</th>
+                                            <th className="px-4 py-3 text-right">Resultado</th>
+                                            <th className="px-4 py-3 text-center">ROI</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                        {roi.rows.map((r) => (
+                                            <tr key={r.videoId} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                                <td className="px-4 py-2">
+                                                    <div className="flex items-center gap-2 min-w-[220px]">
+                                                        <div className="w-14 h-9 rounded overflow-hidden bg-gray-200 dark:bg-gray-600 shrink-0">{r.thumbnailUrl ? <img src={r.thumbnailUrl} alt="" className="w-full h-full object-cover" /> : null}</div>
+                                                        <span className="text-gray-800 dark:text-gray-100 line-clamp-2 text-xs">{r.videoTitle}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-2 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">{brl(r.adSpend)}</td>
+                                                <td className="px-4 py-2 text-center text-gray-500">{r.subsGained.toLocaleString('pt-BR')}</td>
+                                                <td className="px-4 py-2 text-center text-gray-700 dark:text-gray-300">{r.leads}</td>
+                                                <td className="px-4 py-2 text-center font-medium text-emerald-600 dark:text-emerald-400">{r.won}</td>
+                                                <td className="px-4 py-2 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">{brl(r.revenue)}</td>
+                                                <td className={`px-4 py-2 text-right font-bold whitespace-nowrap ${r.net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{brl(r.net)}</td>
+                                                <td className="px-4 py-2 text-center">
+                                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${r.roi >= 1 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' : r.roi > 0 ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700'}`}>{r.roi.toFixed(2)}x</span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="px-4 py-2 text-[11px] text-gray-400 border-t border-gray-100 dark:border-gray-700">
+                                Obs: muitas promoções têm objetivo "Crescimento do público" (inscritos), então a receita direta por UTM subestima o valor — olhe os inscritos ganhos em conjunto.
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Main Table */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
