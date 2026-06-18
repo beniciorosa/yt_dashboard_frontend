@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { VideoMultiSelect, VideoLite } from './VideoMultiSelect';
-import { AnalysisResults } from './AnalysisResults';
+import { AnalysisView } from './AnalysisView';
+import { AnalysisHistory } from './AnalysisHistory';
 import {
   fetchCvModels,
   estimateCv,
@@ -12,7 +13,7 @@ import {
   CvStatusItem,
   CvAnalysis,
 } from '../../../services/crossViewService';
-import { Sparkles, DollarSign, Clock, Loader2, Cpu, Wand2, CheckCircle2, AlertTriangle, FileText } from 'lucide-react';
+import { Sparkles, DollarSign, Clock, Loader2, Cpu, Wand2, CheckCircle2, AlertTriangle, FileText, History, LayoutGrid } from 'lucide-react';
 
 const USD_TO_BRL = 5.4; // aproximado, só para exibição
 
@@ -38,6 +39,7 @@ export const CrossViewScreen: React.FC = () => {
   const [analysis, setAnalysis] = useState<CvAnalysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<'new' | 'history'>('new');
 
   const selectedIds = useMemo(() => selected.map((v) => v.video_id), [selected]);
   const idsKey = useMemo(() => [...selectedIds].sort().join(','), [selectedIds]);
@@ -136,6 +138,26 @@ export const CrossViewScreen: React.FC = () => {
         </p>
       </div>
 
+      {/* Sub-navegação: Nova análise | Histórico */}
+      <div className="inline-flex items-center gap-1 bg-white dark:bg-gray-800 p-1.5 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
+        <button
+          onClick={() => setMode('new')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${mode === 'new' ? 'bg-emerald-500 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+        >
+          <LayoutGrid size={16} /> Nova análise
+        </button>
+        <button
+          onClick={() => setMode('history')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${mode === 'history' ? 'bg-emerald-500 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+        >
+          <History size={16} /> Histórico
+        </button>
+      </div>
+
+      {mode === 'history' ? (
+        <AnalysisHistory />
+      ) : (
+      <>
       <div className="grid lg:grid-cols-2 gap-6">
         <VideoMultiSelect selected={selected} onChange={setSelected} />
 
@@ -278,7 +300,9 @@ export const CrossViewScreen: React.FC = () => {
         </div>
       )}
 
-      {analysis && <AnalysisResults analysis={analysis} videos={selected} />}
+      {analysis && <AnalysisView analysis={analysis} videos={selected} model={model} />}
+      </>
+      )}
     </div>
   );
 };

@@ -77,8 +77,21 @@ export interface CvResult {
   raw?: string;
 }
 
+export interface CvBrief {
+  titulos?: string[];
+  thumbnail?: { conceito?: string; texto?: string; elementos?: string[] };
+  hook?: string;
+  roteiro?: { secao?: string; objetivo?: string; pontos?: string[] }[];
+  cta?: string;
+  publico_alvo?: string;
+  gatilhos?: string[];
+  _parseError?: boolean;
+  raw?: string;
+}
+
 export interface CvAnalysis {
   cached: boolean;
+  id?: number;
   set_hash?: string;
   video_ids?: string[];
   model?: string;
@@ -88,6 +101,31 @@ export interface CvAnalysis {
   output_tokens?: number | null;
   cost_usd?: number | null;
   created_at?: string;
+  title?: string | null;
+  favorite?: boolean;
+  brief?: CvBrief | null;
+  brief_model?: string | null;
+}
+
+export interface CvAnalysisListItem {
+  id: number;
+  set_hash: string;
+  video_ids: string[];
+  videoCount: number;
+  model: string;
+  cost_usd: number | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  created_at: string;
+  title: string | null;
+  favorite: boolean;
+  hasBrief: boolean;
+}
+
+export interface CvVideoMeta {
+  video_id: string;
+  title: string;
+  thumbnail_url: string;
 }
 
 export const fetchCvModels = async (): Promise<CvModelsResponse | null> => {
@@ -163,12 +201,12 @@ export const setManualTranscript = async (videoId: string, transcript: string): 
   }
 };
 
-export const analyzeCv = async (videoIds: string[], model: string): Promise<CvAnalysis | null> => {
+export const analyzeCv = async (videoIds: string[], model: string, force = false): Promise<CvAnalysis | null> => {
   try {
     const res = await fetch(`${API_BASE_URL}/api/cross-view/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ videoIds, model }),
+      body: JSON.stringify({ videoIds, model, force }),
     });
     if (!res.ok) {
       const txt = await res.text().catch(() => '');
@@ -177,6 +215,80 @@ export const analyzeCv = async (videoIds: string[], model: string): Promise<CvAn
     return await res.json();
   } catch (e) {
     console.error('analyzeCv', e);
+    return null;
+  }
+};
+
+export const listAnalyses = async (limit = 30): Promise<CvAnalysisListItem[]> => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/cross-view/analyses?limit=${limit}`);
+    if (!res.ok) throw new Error('Falha ao listar análises');
+    const json = await res.json();
+    return json.items || [];
+  } catch (e) {
+    console.error('listAnalyses', e);
+    return [];
+  }
+};
+
+export const getAnalysisById = async (
+  id: number | string,
+): Promise<{ analysis: CvAnalysis; videos: CvVideoMeta[] } | null> => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/cross-view/analyses/${id}`);
+    if (!res.ok) throw new Error('Falha ao carregar análise');
+    return await res.json();
+  } catch (e) {
+    console.error('getAnalysisById', e);
+    return null;
+  }
+};
+
+export const updateAnalysisMeta = async (
+  id: number | string,
+  patch: { title?: string; favorite?: boolean },
+): Promise<boolean> => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/cross-view/analyses/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    return res.ok;
+  } catch (e) {
+    console.error('updateAnalysisMeta', e);
+    return false;
+  }
+};
+
+export const deleteAnalysis = async (id: number | string): Promise<boolean> => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/cross-view/analyses/${id}`, { method: 'DELETE' });
+    return res.ok;
+  } catch (e) {
+    console.error('deleteAnalysis', e);
+    return false;
+  }
+};
+
+export const generateBrief = async (
+  id: number | string,
+  model?: string,
+  theme?: string,
+): Promise<{ brief: CvBrief; brief_model: string } | null> => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/cross-view/brief`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, model, theme }),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(txt || 'Falha ao gerar brief');
+    }
+    return await res.json();
+  } catch (e) {
+    console.error('generateBrief', e);
     return null;
   }
 };
