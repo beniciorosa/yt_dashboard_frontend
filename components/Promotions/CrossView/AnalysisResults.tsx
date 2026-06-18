@@ -2,11 +2,12 @@ import React from 'react';
 import { CvAnalysis, CvPerVideo } from '../../../services/crossViewService';
 import { VideoLite } from './VideoMultiSelect';
 import { Users, TrendingUp, Lightbulb, Target, AlertTriangle, Tag } from 'lucide-react';
+import { txt } from './cvText';
 
 const brl = (n?: number) => 'R$ ' + (n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const tierColor = (tier?: string) => {
-  const t = (tier || '').toLowerCase();
+const tierColor = (tier?: any) => {
+  const t = txt(tier).toLowerCase();
   if (t.includes('avanç') || t.includes('avanc') || t.includes('advanced')) return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300';
   if (t.includes('inter')) return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300';
   if (t.includes('inici') || t.includes('begin')) return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
@@ -59,9 +60,9 @@ export const AnalysisResults: React.FC<Props> = ({ analysis, videos }) => {
           <div className="space-y-3">
             {ci.fatoresDeConversao.map((f, i) => (
               <div key={i} className="border-l-2 border-emerald-400 pl-3">
-                <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{f.fator}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">{f.explicacao}</p>
-                {f.evidencia && <p className="text-xs text-gray-400 mt-0.5 italic">Evidência: {f.evidencia}</p>}
+                <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{txt(f.fator)}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">{txt(f.explicacao)}</p>
+                {f.evidencia && <p className="text-xs text-gray-400 mt-0.5 italic">Evidência: {txt(f.evidencia)}</p>}
               </div>
             ))}
           </div>
@@ -71,19 +72,19 @@ export const AnalysisResults: React.FC<Props> = ({ analysis, videos }) => {
           {ci.padroesDeTitulo && (
             <div className="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
               <p className="text-xs font-bold text-gray-500 uppercase mb-1">Padrões de Título</p>
-              <p className="text-sm text-gray-700 dark:text-gray-300">{ci.padroesDeTitulo}</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300">{txt(ci.padroesDeTitulo)}</p>
             </div>
           )}
           {ci.padroesDeThumbnail && (
             <div className="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
               <p className="text-xs font-bold text-gray-500 uppercase mb-1">Padrões de Thumbnail</p>
-              <p className="text-sm text-gray-700 dark:text-gray-300">{ci.padroesDeThumbnail}</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300">{txt(ci.padroesDeThumbnail)}</p>
             </div>
           )}
           {ci.padroesDeConteudo && (
             <div className="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
               <p className="text-xs font-bold text-gray-500 uppercase mb-1">Padrões de Conteúdo</p>
-              <p className="text-sm text-gray-700 dark:text-gray-300">{ci.padroesDeConteudo}</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300">{txt(ci.padroesDeConteudo)}</p>
             </div>
           )}
         </div>
@@ -96,7 +97,7 @@ export const AnalysisResults: React.FC<Props> = ({ analysis, videos }) => {
             <div className="space-y-2">
               {ci.audienceSegmentMap.map((seg, i) => (
                 <div key={i} className="flex items-start gap-2 text-sm">
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${tierColor(seg.segmento)}`}>{seg.segmento}</span>
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${tierColor(seg.segmento)}`}>{txt(seg.segmento)}</span>
                   <span className="text-gray-500">{(seg.videoIds || []).map((id) => titleOf(id)).join(' · ')}</span>
                 </div>
               ))}
@@ -112,7 +113,7 @@ export const AnalysisResults: React.FC<Props> = ({ analysis, videos }) => {
             <div className="space-y-1">
               {ci.productAffinity.map((p, i) => (
                 <p key={i} className="text-sm text-gray-600 dark:text-gray-300">
-                  <b className="text-gray-800 dark:text-gray-100">{p.produto}</b> — {p.tipoDeConteudo}
+                  <b className="text-gray-800 dark:text-gray-100">{txt(p.produto)}</b> — {txt(p.tipoDeConteudo)}
                 </p>
               ))}
             </div>
@@ -129,7 +130,7 @@ export const AnalysisResults: React.FC<Props> = ({ analysis, videos }) => {
           <ul className="space-y-2">
             {ci.recommendations.map((r, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-200">
-                <span className="text-emerald-500 font-bold">{i + 1}.</span> {r}
+                <span className="text-emerald-500 font-bold">{i + 1}.</span> {txt(r)}
               </li>
             ))}
           </ul>
@@ -154,7 +155,7 @@ export const AnalysisResults: React.FC<Props> = ({ analysis, videos }) => {
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 {v.audienceProfile?.tier && (
                   <span className={`px-2 py-0.5 rounded font-medium ${tierColor(v.audienceProfile.tier)}`}>
-                    🎯 {v.audienceProfile.tier}
+                    🎯 {txt(v.audienceProfile.tier)}
                   </span>
                 )}
                 <span className="text-gray-500">Leads: <b className="text-gray-700 dark:text-gray-200">{v.leads ?? 0}</b></span>
@@ -164,28 +165,28 @@ export const AnalysisResults: React.FC<Props> = ({ analysis, videos }) => {
               </div>
 
               {v.audienceProfile?.justificativa && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 italic">{v.audienceProfile.justificativa}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 italic">{txt(v.audienceProfile.justificativa)}</p>
               )}
 
               {v.conversionDrivers && (
                 <div className="text-xs text-gray-600 dark:text-gray-300 space-y-1 bg-gray-50 dark:bg-gray-900/40 rounded-lg p-2">
-                  {v.conversionDrivers.hook && <p><b>Hook:</b> {v.conversionDrivers.hook}</p>}
-                  {v.conversionDrivers.titulo && <p><b>Título:</b> {v.conversionDrivers.titulo}</p>}
-                  {v.conversionDrivers.thumbnail && <p><b>Thumbnail:</b> {v.conversionDrivers.thumbnail}</p>}
-                  {v.conversionDrivers.profundidade && <p><b>Profundidade:</b> {v.conversionDrivers.profundidade}</p>}
-                  {v.conversionDrivers.cta && <p><b>CTA:</b> {v.conversionDrivers.cta}</p>}
+                  {v.conversionDrivers.hook && <p><b>Hook:</b> {txt(v.conversionDrivers.hook)}</p>}
+                  {v.conversionDrivers.titulo && <p><b>Título:</b> {txt(v.conversionDrivers.titulo)}</p>}
+                  {v.conversionDrivers.thumbnail && <p><b>Thumbnail:</b> {txt(v.conversionDrivers.thumbnail)}</p>}
+                  {v.conversionDrivers.profundidade && <p><b>Profundidade:</b> {txt(v.conversionDrivers.profundidade)}</p>}
+                  {v.conversionDrivers.cta && <p><b>CTA:</b> {txt(v.conversionDrivers.cta)}</p>}
                 </div>
               )}
 
               {v.porqueConverteuOuNao && (
-                <p className="text-sm text-gray-700 dark:text-gray-200">{v.porqueConverteuOuNao}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-200">{txt(v.porqueConverteuOuNao)}</p>
               )}
 
               {v.productMix && v.productMix.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {v.productMix.slice(0, 6).map((p, i) => (
                     <span key={i} className="text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded">
-                      {p.name}{p.count > 1 ? ` ×${p.count}` : ''}
+                      {txt(p.name)}{p.count > 1 ? ` ×${p.count}` : ''}
                     </span>
                   ))}
                 </div>

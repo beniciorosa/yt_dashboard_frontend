@@ -17,6 +17,8 @@ import {
   Check,
   Lightbulb,
 } from 'lucide-react';
+import { txt } from './cvText';
+import { ErrorBoundary } from './ErrorBoundary';
 
 type VideoMeta = { video_id: string; title: string; thumbnail_url: string };
 
@@ -37,44 +39,44 @@ function buildMarkdown(a: CvAnalysis, videos: VideoMeta[]): string {
   if (a.created_at) md += ` · ${new Date(a.created_at).toLocaleString('pt-BR')}`;
   md += `\n\n`;
 
-  const ci = r.crossInsights || {};
-  if (ci.fatoresDeConversao?.length) {
+  const ci: any = r.crossInsights || {};
+  if (Array.isArray(ci.fatoresDeConversao) && ci.fatoresDeConversao.length) {
     md += `## Fatores de conversão\n`;
-    ci.fatoresDeConversao.forEach((f) => (md += `- **${f.fator}** — ${f.explicacao}${f.evidencia ? ` (Evidência: ${f.evidencia})` : ''}\n`));
+    ci.fatoresDeConversao.forEach((f: any) => (md += `- **${txt(f.fator)}** — ${txt(f.explicacao)}${f.evidencia ? ` (Evidência: ${txt(f.evidencia)})` : ''}\n`));
     md += `\n`;
   }
-  if (ci.padroesDeTitulo) md += `**Padrões de título:** ${ci.padroesDeTitulo}\n\n`;
-  if (ci.padroesDeThumbnail) md += `**Padrões de thumbnail:** ${ci.padroesDeThumbnail}\n\n`;
-  if (ci.padroesDeConteudo) md += `**Padrões de conteúdo:** ${ci.padroesDeConteudo}\n\n`;
-  if (ci.recommendations?.length) {
+  if (ci.padroesDeTitulo) md += `**Padrões de título:** ${txt(ci.padroesDeTitulo)}\n\n`;
+  if (ci.padroesDeThumbnail) md += `**Padrões de thumbnail:** ${txt(ci.padroesDeThumbnail)}\n\n`;
+  if (ci.padroesDeConteudo) md += `**Padrões de conteúdo:** ${txt(ci.padroesDeConteudo)}\n\n`;
+  if (Array.isArray(ci.recommendations) && ci.recommendations.length) {
     md += `## Recomendações\n`;
-    ci.recommendations.forEach((x, i) => (md += `${i + 1}. ${x}\n`));
+    ci.recommendations.forEach((x: any, i: number) => (md += `${i + 1}. ${txt(x)}\n`));
     md += `\n`;
   }
-  if (r.perVideo?.length) {
+  if (Array.isArray(r.perVideo) && r.perVideo.length) {
     md += `## Por vídeo\n`;
-    r.perVideo.forEach((v) => {
+    r.perVideo.forEach((v: any) => {
       md += `### ${titleOf(v.videoId)}\n`;
-      md += `- Público: ${v.audienceProfile?.tier || '?'} — ${v.audienceProfile?.justificativa || ''}\n`;
+      md += `- Público: ${txt(v.audienceProfile?.tier) || '?'} — ${txt(v.audienceProfile?.justificativa)}\n`;
       md += `- Leads: ${v.leads ?? 0} · Vendas: ${v.won ?? 0} · Ticket: ${brl(v.ticketMedio)} · Receita: ${brl(v.revenue)}\n`;
-      if (v.porqueConverteuOuNao) md += `- ${v.porqueConverteuOuNao}\n`;
+      if (v.porqueConverteuOuNao) md += `- ${txt(v.porqueConverteuOuNao)}\n`;
       md += `\n`;
     });
   }
-  const b = a.brief;
+  const b: any = a.brief;
   if (b) {
     md += `## Brief do próximo vídeo\n`;
-    if (b.titulos?.length) {
+    if (Array.isArray(b.titulos) && b.titulos.length) {
       md += `**Títulos:**\n`;
-      b.titulos.forEach((t) => (md += `- ${t}\n`));
+      b.titulos.forEach((t: any) => (md += `- ${txt(t)}\n`));
     }
-    if (b.hook) md += `**Hook:** ${b.hook}\n`;
-    if (b.thumbnail) md += `**Thumbnail:** ${b.thumbnail.conceito || ''}${b.thumbnail.texto ? ` (texto: ${b.thumbnail.texto})` : ''}\n`;
-    if (b.roteiro?.length) {
+    if (b.hook) md += `**Hook:** ${txt(b.hook)}\n`;
+    if (b.thumbnail) md += `**Thumbnail:** ${txt(b.thumbnail.conceito)}${b.thumbnail.texto ? ` (texto: ${txt(b.thumbnail.texto)})` : ''}\n`;
+    if (Array.isArray(b.roteiro) && b.roteiro.length) {
       md += `**Roteiro:**\n`;
-      b.roteiro.forEach((s) => (md += `- ${s.secao}: ${s.objetivo}\n`));
+      b.roteiro.forEach((s: any) => (md += `- ${typeof s === 'string' ? txt(s) : `${txt(s.secao)}: ${txt(s.objetivo)}`}\n`));
     }
-    if (b.cta) md += `**CTA:** ${b.cta}\n`;
+    if (b.cta) md += `**CTA:** ${txt(b.cta)}\n`;
   }
   return md;
 }
@@ -199,10 +201,13 @@ export const AnalysisView: React.FC<Props> = ({ analysis, videos, model }) => {
         </div>
       </div>
 
-      <AnalysisResults analysis={cur} videos={videos as any} />
+      <ErrorBoundary label="a análise">
+        <AnalysisResults analysis={cur} videos={videos as any} />
+      </ErrorBoundary>
 
       {/* Brief */}
       {brief && (
+        <ErrorBoundary label="o brief">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 space-y-4">
           <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Lightbulb className="text-amber-500" size={20} /> Brief do próximo vídeo
@@ -213,12 +218,12 @@ export const AnalysisView: React.FC<Props> = ({ analysis, videos, model }) => {
             <pre className="text-xs whitespace-pre-wrap text-gray-600 dark:text-gray-300 max-h-72 overflow-auto">{brief.raw}</pre>
           ) : (
             <div className="grid md:grid-cols-2 gap-4 text-sm">
-              {brief.titulos?.length ? (
+              {Array.isArray(brief.titulos) && brief.titulos.length ? (
                 <div>
                   <p className="text-xs font-bold text-gray-500 uppercase mb-1">Títulos sugeridos</p>
                   <ul className="space-y-1">
-                    {brief.titulos.map((t, i) => (
-                      <li key={i} className="text-gray-800 dark:text-gray-100">• {t}</li>
+                    {brief.titulos.map((t: any, i: number) => (
+                      <li key={i} className="text-gray-800 dark:text-gray-100">• {txt(t)}</li>
                     ))}
                   </ul>
                 </div>
@@ -226,12 +231,12 @@ export const AnalysisView: React.FC<Props> = ({ analysis, videos, model }) => {
               {brief.thumbnail && (
                 <div>
                   <p className="text-xs font-bold text-gray-500 uppercase mb-1">Thumbnail</p>
-                  <p className="text-gray-700 dark:text-gray-300">{brief.thumbnail.conceito}</p>
-                  {brief.thumbnail.texto && <p className="text-gray-500 mt-1">Texto: <b>{brief.thumbnail.texto}</b></p>}
-                  {brief.thumbnail.elementos?.length ? (
+                  <p className="text-gray-700 dark:text-gray-300">{txt(brief.thumbnail.conceito)}</p>
+                  {brief.thumbnail.texto && <p className="text-gray-500 mt-1">Texto: <b>{txt(brief.thumbnail.texto)}</b></p>}
+                  {Array.isArray(brief.thumbnail.elementos) && brief.thumbnail.elementos.length ? (
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {brief.thumbnail.elementos.map((e, i) => (
-                        <span key={i} className="text-[10px] bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">{e}</span>
+                      {brief.thumbnail.elementos.map((e: any, i: number) => (
+                        <span key={i} className="text-[10px] bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">{txt(e)}</span>
                       ))}
                     </div>
                   ) : null}
@@ -240,24 +245,30 @@ export const AnalysisView: React.FC<Props> = ({ analysis, videos, model }) => {
               {brief.hook && (
                 <div className="md:col-span-2">
                   <p className="text-xs font-bold text-gray-500 uppercase mb-1">Hook</p>
-                  <p className="text-gray-700 dark:text-gray-300">{brief.hook}</p>
+                  <p className="text-gray-700 dark:text-gray-300">{txt(brief.hook)}</p>
                 </div>
               )}
-              {brief.roteiro?.length ? (
+              {Array.isArray(brief.roteiro) && brief.roteiro.length ? (
                 <div className="md:col-span-2">
                   <p className="text-xs font-bold text-gray-500 uppercase mb-1">Roteiro</p>
                   <div className="space-y-2">
-                    {brief.roteiro.map((s, i) => (
+                    {brief.roteiro.map((s: any, i: number) => (
                       <div key={i} className="border-l-2 border-emerald-400 pl-3">
-                        <p className="font-semibold text-gray-800 dark:text-gray-100">{s.secao}</p>
-                        {s.objetivo && <p className="text-gray-600 dark:text-gray-400 text-xs">{s.objetivo}</p>}
-                        {s.pontos?.length ? (
-                          <ul className="text-xs text-gray-600 dark:text-gray-300 mt-0.5 list-disc list-inside">
-                            {s.pontos.map((p, j) => (
-                              <li key={j}>{p}</li>
-                            ))}
-                          </ul>
-                        ) : null}
+                        {typeof s === 'string' ? (
+                          <p className="text-gray-700 dark:text-gray-300 text-sm">{txt(s)}</p>
+                        ) : (
+                          <>
+                            <p className="font-semibold text-gray-800 dark:text-gray-100">{txt(s?.secao)}</p>
+                            {s?.objetivo && <p className="text-gray-600 dark:text-gray-400 text-xs">{txt(s.objetivo)}</p>}
+                            {Array.isArray(s?.pontos) && s.pontos.length ? (
+                              <ul className="text-xs text-gray-600 dark:text-gray-300 mt-0.5 list-disc list-inside">
+                                {s.pontos.map((p: any, j: number) => (
+                                  <li key={j}>{txt(p)}</li>
+                                ))}
+                              </ul>
+                            ) : null}
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -266,18 +277,19 @@ export const AnalysisView: React.FC<Props> = ({ analysis, videos, model }) => {
               {brief.cta && (
                 <div className="md:col-span-2">
                   <p className="text-xs font-bold text-gray-500 uppercase mb-1">CTA</p>
-                  <p className="text-gray-700 dark:text-gray-300">{brief.cta}</p>
+                  <p className="text-gray-700 dark:text-gray-300">{txt(brief.cta)}</p>
                 </div>
               )}
               {brief.publico_alvo && (
                 <div className="md:col-span-2">
                   <p className="text-xs font-bold text-gray-500 uppercase mb-1">Público-alvo</p>
-                  <p className="text-gray-700 dark:text-gray-300">{brief.publico_alvo}</p>
+                  <p className="text-gray-700 dark:text-gray-300">{txt(brief.publico_alvo)}</p>
                 </div>
               )}
             </div>
           )}
         </div>
+        </ErrorBoundary>
       )}
     </div>
   );
