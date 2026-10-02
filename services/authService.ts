@@ -1,57 +1,65 @@
-// --- START OF FILE services/authService.ts ---
-import { AUTH_CONFIG } from './authConfig';
+import { API_URL, apiFetch } from './apiClient';
+
+// Conexão do canal do YouTube (OAuth Google). O client secret e o refresh_token vivem só no
+// backend; o navegador guarda apenas o access_token de curta duração.
+const GOOGLE_CLIENT_ID = '271641116604-ghj5qe7mlpfq9qu8prk31seavncelkpc.apps.googleusercontent.com';
+const SCOPES = [
+  'https://www.googleapis.com/auth/yt-analytics.readonly',
+  'https://www.googleapis.com/auth/youtube.readonly',
+  'https://www.googleapis.com/auth/yt-analytics-monetary.readonly',
+  'https://www.googleapis.com/auth/youtubepartner',
+  'https://www.googleapis.com/auth/youtube.force-ssl',
+].join(' ');
 
 const TOKEN_KEY = 'yt_access_token';
-const REFRESH_KEY = 'yt_refresh_token';
 const EXPIRY_KEY = 'yt_token_expiry';
+const CHANNEL_KEY = 'yt_channel_id';
+const LEGACY_REFRESH_KEY = 'yt_refresh_token';
 
-const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080' : 'https://yt-dashboard-backend.vercel.app')) + '/api/youtube';
+const OAUTH_URL = `${API_URL}/youtube/oauth`;
+
+// Precisa estar cadastrada no Google Cloud Console (em produção é o domínio do app).
+const redirectUri = () => import.meta.env.VITE_OAUTH_REDIRECT_URI || window.location.origin;
+
+const clearSession = () => {
+  [TOKEN_KEY, EXPIRY_KEY, CHANNEL_KEY, LEGACY_REFRESH_KEY].forEach((k) => localStorage.removeItem(k));
+};
 
 export const initiateLogin = () => {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(REFRESH_KEY);
-  localStorage.removeItem(EXPIRY_KEY);
+  clearSession();
 
   const url =
     `https://accounts.google.com/o/oauth2/v2/auth` +
-    `?client_id=${encodeURIComponent(AUTH_CONFIG.clientId)}` +
-    `&redirect_uri=${encodeURIComponent(AUTH_CONFIG.redirectUri)}` +
+    `?client_id=${encodeURIComponent(GOOGLE_CLIENT_ID)}` +
+    `&redirect_uri=${encodeURIComponent(redirectUri())}` +
     `&response_type=code` +
-    `&scope=${encodeURIComponent(AUTH_CONFIG.scopes)}` +
+    `&scope=${encodeURIComponent(SCOPES)}` +
     `&access_type=offline` +
     `&prompt=consent`;
 
   window.location.href = url;
 };
 
+const storeAccessToken = (data: { access_token: string; expires_in?: number; channelId?: string }) => {
+  const expiresIn = Number(data.expires_in) || 3599;
+  // margem de 60 s
+  localStorage.setItem(TOKEN_KEY, data.access_token);
+  localStorage.setItem(EXPIRY_KEY, (Date.now() + (expiresIn - 60) * 1000).toString());
+  if (data.channelId) localStorage.setItem(CHANNEL_KEY, data.channelId);
+};
+
 export const handleAuthCallback = async (code: string): Promise<boolean> => {
   try {
-    console.log("Exchanging code for token (Client-Side)...");
-
-    // Troca direta com Google
-    const response = await fetch('https://oauth2.googleapis.com/token', {
+    const res = await apiFetch(`${OAUTH_URL}/exchange`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        code,
-        client_id: AUTH_CONFIG.clientId,
-        client_secret: AUTH_CONFIG.clientSecret,
-        redirect_uri: AUTH_CONFIG.redirectUri,
-        grant_type: 'authorization_code',
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, redirectUri: redirectUri() }),
     });
-
-    const data = await response.json();
-    console.log("Token exchange response:", data);
-
-    if (data.error) {
-      console.error('Error exchanging token:', data);
+    if (!res.ok) {
+      console.error('Falha ao conectar o canal:', await res.text());
       return false;
     }
-
-    saveSession(data);
+    storeAccessToken(await res.json());
     return true;
   } catch (error) {
     console.error('Auth error:', error);
@@ -59,117 +67,59 @@ export const handleAuthCallback = async (code: string): Promise<boolean> => {
   }
 };
 
-export const saveSession = (data: any) => {
-  // Ensure numeric calculation
-  const expiresIn = Number(data.expires_in) || 3599;
-  // Buffer of 60 seconds
-  const expiryTime = Date.now() + (expiresIn - 60) * 1000;
-
-  localStorage.setItem(TOKEN_KEY, data.access_token);
-  localStorage.setItem(EXPIRY_KEY, expiryTime.toString());
-
-  // Only overwrite refresh token if a new one is provided (refresh flows don't always return it)
+/**
+ * Tokens vindos do login Google do próprio app (Supabase provider). O refresh_token,
+ * quando existe, é entregue ao backend e não fica no navegador.
+ */
+export const saveSession = (data: { access_token: string; refresh_token?: string | null; expires_in?: number }) => {
+  storeAccessToken(data);
   if (data.refresh_token) {
-    localStorage.setItem(REFRESH_KEY, data.refresh_token);
-    // Despachar para o backend salvar para automação
-    syncAuthWithBackend(data.access_token, data.refresh_token).catch(console.error);
-  }
-};
-
-const syncAuthWithBackend = async (accessToken: string, refreshToken: string) => {
-  try {
-    console.log("Sincronizando autenticação com o backend para automação...");
-    // 1. Pegar Channel ID
-    const resChannel = await fetch('https://www.googleapis.com/youtube/v3/channels?part=id&mine=true', {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-    if (!resChannel.ok) throw new Error("Falha ao obter ID do canal para sincronismo.");
-    const channelData = await resChannel.json();
-    const channelId = channelData.items?.[0]?.id;
-
-    if (!channelId) throw new Error("ID do canal não encontrado.");
-
-    // 2. Enviar para o backend
-    const resSync = await fetch(`${BACKEND_URL}/save-auth`, {
+    apiFetch(`${OAUTH_URL}/store`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ channelId, refreshToken })
-    });
-
-    if (!resSync.ok) {
-      console.warn("Falha ao salvar refresh_token no backend:", await resSync.text());
-    } else {
-      console.log("✅ Refresh token salvo com sucesso no backend!");
-    }
-  } catch (error) {
-    console.error("Erro no syncAuthWithBackend:", error);
+      body: JSON.stringify({ accessToken: data.access_token, refreshToken: data.refresh_token }),
+    })
+      .then(async (res) => {
+        if (res.ok) storeAccessToken({ access_token: data.access_token, expires_in: data.expires_in, ...(await res.json()) });
+        else console.warn('Falha ao salvar a conexão do canal no backend:', await res.text());
+      })
+      .catch(console.error);
   }
 };
 
 export const getAccessToken = async (forceRefresh = false): Promise<string | null> => {
   const token = localStorage.getItem(TOKEN_KEY);
   const expiry = localStorage.getItem(EXPIRY_KEY);
-  const refreshToken = localStorage.getItem(REFRESH_KEY);
-
   if (!token || !expiry) return null;
 
-  const isExpired = Date.now() >= parseInt(expiry, 10);
-
-  // If we are not forcing a refresh and the token is still valid, return it
-  if (!forceRefresh && !isExpired) {
-    return token;
-  }
-
-  // If we need to refresh (expired or forced) but have no refresh token, we can't do anything
-  if (!refreshToken) {
-    console.warn("Token expired and no refresh token available.");
-    logout();
-    return null;
-  }
+  if (!forceRefresh && Date.now() < parseInt(expiry, 10)) return token;
 
   try {
-    console.log("Refreshing token...");
-    const response = await fetch('https://oauth2.googleapis.com/token', {
+    const res = await apiFetch(`${OAUTH_URL}/token`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        client_id: AUTH_CONFIG.clientId,
-        client_secret: AUTH_CONFIG.clientSecret,
-        refresh_token: refreshToken,
-        grant_type: 'refresh_token',
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channelId: localStorage.getItem(CHANNEL_KEY) || undefined }),
     });
-
-    const data = await response.json();
-
-    if (data.access_token) {
-      saveSession(data);
-      return data.access_token;
-    } else {
-      console.error("Refresh failed", data);
-      // Only logout if it's strictly a permission/bad request error which implies the refresh token is dead
-      if (data.error === 'invalid_grant') {
-        logout();
-      }
+    if (res.status === 409) {
+      // refresh_token ausente ou revogado no servidor: o canal precisa ser reconectado
+      console.warn('Canal precisa ser reconectado:', await res.text());
+      clearSession();
       return null;
     }
+    if (!res.ok) return null;
+    const data = await res.json();
+    storeAccessToken(data);
+    return data.access_token;
   } catch (e) {
-    console.error("Error refreshing token:", e);
-    // Don't logout on network error, just return null so the app handles it gracefully
+    // erro de rede: não derruba a sessão
+    console.error('Error refreshing token:', e);
     return null;
   }
 };
 
 export const logout = () => {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(REFRESH_KEY);
-  localStorage.removeItem(EXPIRY_KEY);
+  clearSession();
   window.location.href = '/';
 };
 
-export const isAuthenticated = (): boolean => {
-  // Simple check for presence of token
-  return !!localStorage.getItem(TOKEN_KEY);
-};
+export const isAuthenticated = (): boolean => !!localStorage.getItem(TOKEN_KEY);

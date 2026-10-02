@@ -1,4 +1,4 @@
-import { supabase } from './descriptionSupabaseClient';
+import { supabase } from './supabaseClient';
 import { SocialItem, LinkItem } from '../components/DescriptionGenerator/ConfigurationForm';
 
 // Interfaces matching Supabase Tables

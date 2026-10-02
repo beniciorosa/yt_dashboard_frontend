@@ -6,11 +6,12 @@ export interface GeneratedContent {
     chapters_rationale?: string;
 }
 
-const API_URL = (import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080' : 'https://yt-dashboard-backend.vercel.app')) + '/api/openai';
+import { BACKEND_URL, apiFetch } from './apiClient';
+const API_URL = `${BACKEND_URL}/api/openai`;
 
 export const analyzeCompetitor = async (data: any) => {
     try {
-        const response = await fetch(`${API_URL}/analyze-competitor`, {
+        const response = await apiFetch(`${API_URL}/analyze-competitor`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -33,7 +34,7 @@ export const transcribeAudioOpenAI = async (fileUrl: string): Promise<string> =>
     try {
         console.log("Iniciando transcrição via Backend (URL)...");
 
-        const response = await fetch(`${API_URL}/transcribe`, {
+        const response = await apiFetch(`${API_URL}/transcribe`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -62,7 +63,7 @@ export const generateDescriptionOpenAI = async (
     try {
         console.log("Enviando solicitação de descrição para Backend...");
 
-        const response = await fetch(`${API_URL}/generate-description`, {
+        const response = await apiFetch(`${API_URL}/generate-description`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -92,7 +93,7 @@ export const generateEmailOpenAI = async (
     videoUrl: string
 ): Promise<{ subject: string; body: string }> => {
     try {
-        const response = await fetch(`${API_URL}/generate-email`, {
+        const response = await apiFetch(`${API_URL}/generate-email`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

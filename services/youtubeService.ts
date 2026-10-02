@@ -1,5 +1,6 @@
 ﻿import { Competitor, StatSnapshot } from '../types';
 import { getAccessToken } from './authService';
+import { BACKEND_URL, apiFetch } from './apiClient';
 
 // --- CONFIGURAÇÃO DA API ---
 // A chave agora está no backend (.env)
@@ -33,7 +34,7 @@ export interface VideoData {
 }
 
 const ANALYTICS_URL = 'https://youtubeanalytics.googleapis.com/v2/reports';
-const BASE_BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080' : 'https://yt-dashboard-backend.vercel.app')) + '/api/youtube';
+const BASE_BACKEND_URL = `${BACKEND_URL}/api/youtube`;
 const API_URL = `${BASE_BACKEND_URL}/proxy`;
 
 const fetchFromProxy = async (endpoint: string, params: Record<string, string>) => {
@@ -45,7 +46,7 @@ const fetchFromProxy = async (endpoint: string, params: Record<string, string>) 
         }
     });
 
-    const res = await fetch(url.toString());
+    const res = await apiFetch(url.toString());
     if (!res.ok) {
         const text = await res.text();
         console.error(`Proxy Error (${endpoint}):`, text);
@@ -280,7 +281,7 @@ export const fetchTopVideosFromAnalytics = async (startDate: string, endDate: st
         const start = startDate.split('T')[0];
         const end = endDate.split('T')[0];
         const url = `${ANALYTICS_URL}?ids=channel==MINE&startDate=${start}&endDate=${end}&metrics=${metrics}&dimensions=video&sort=-views&maxResults=50`;
-        return fetch(url, { headers: { 'Authorization': `Bearer ${authToken}` } });
+        return apiFetch(url, { headers: { 'Authorization': `Bearer ${authToken}` } });
     };
 
     let metrics = "views,estimatedMinutesWatched,estimatedRevenue,subscribersGained,likes,comments";
@@ -388,8 +389,8 @@ export const fetchVideoDemographics = async (videoId: string, startDate: string,
 
     try {
         const [ageRes, genderRes] = await Promise.all([
-            fetch(ageUrl, { headers: { 'Authorization': `Bearer ${token}` } }),
-            fetch(genderUrl, { headers: { 'Authorization': `Bearer ${token}` } })
+            apiFetch(ageUrl, { headers: { 'Authorization': `Bearer ${token}` } }),
+            apiFetch(genderUrl, { headers: { 'Authorization': `Bearer ${token}` } })
         ]);
 
         const ageData = await ageRes.json();
@@ -415,7 +416,7 @@ export const fetchVideoTrafficSources = async (videoId: string, startDate: strin
     const url = `${ANALYTICS_URL}?ids=channel==MINE&startDate=${start}&endDate=${end}&metrics=views&dimensions=insightTrafficSourceType&filters=video==${videoId}&sort=-views&maxResults=10`;
 
     try {
-        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await apiFetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
         const data = await res.json();
         return data.rows || [];
     } catch (e) {
@@ -436,13 +437,13 @@ export const fetchVideoDailyMetrics = async (videoId: string, startDate: string,
     let url = `${ANALYTICS_URL}?ids=channel==MINE&startDate=${start}&endDate=${end}&metrics=${metrics}&dimensions=day&filters=video==${videoId}&sort=day`;
 
     try {
-        let res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+        let res = await apiFetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
 
         if (!res.ok) {
             // Fallback without revenue
             metrics = "views,estimatedMinutesWatched,subscribersGained";
             url = `${ANALYTICS_URL}?ids=channel==MINE&startDate=${start}&endDate=${end}&metrics=${metrics}&dimensions=day&filters=video==${videoId}&sort=day`;
-            res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+            res = await apiFetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
         }
 
         const data = await res.json();
@@ -457,23 +458,71 @@ export const fetchVideoDailyMetrics = async (videoId: string, startDate: string,
 };
 
 export const fetchVideosFromDb = async (channelId: string): Promise<VideoData[]> => {
-    const res = await fetch(`${BASE_BACKEND_URL}/dashboard?channelId=${channelId}`);
+    const res = await apiFetch(`${BASE_BACKEND_URL}/dashboard?channelId=${channelId}`);
     if (!res.ok) throw new Error("Erro ao buscar vídeos do banco de dados.");
     return await res.json();
 };
 
 export const fetchVideoDeepDiveFromDb = async (videoId: string): Promise<{ retention: any[], traffic: any[] }> => {
-    const res = await fetch(`${BASE_BACKEND_URL}/video-details/${videoId}`);
+    const res = await apiFetch(`${BASE_BACKEND_URL}/video-details/${videoId}`);
     if (!res.ok) throw new Error("Erro ao buscar detalhes profundos do vídeo.");
     return await res.json();
 };
 
-export const triggerSync = async (channelId: string, includeDeepDive: boolean = true) => {
-    const res = await fetch(`${BASE_BACKEND_URL.replace('/proxy', '')}/sync-detailed`, {
+export interface SyncSummary {
+    success: boolean;
+    discovered: number;
+    processed: number;
+    failedBatches: number;
+    stoppedByBudget: boolean;
+}
+
+export const triggerSync = async (channelId: string, includeDeepDive: boolean = true): Promise<SyncSummary> => {
+    const res = await apiFetch(`${BASE_BACKEND_URL}/sync-detailed`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ channelId, includeDeepDive })
     });
-    if (!res.ok) throw new Error("Erro ao disparar sincronização.");
+    if (!res.ok) throw new Error((await res.json().catch(() => null))?.message || "Erro ao disparar sincronização.");
     return await res.json();
+};
+
+export interface VideoSyncStatus {
+    total: number;
+    processed: number;
+    isSyncing: boolean;
+    error?: string;
+}
+
+/**
+ * Sincroniza o canal inteiro pelo backend. Cada chamada cabe no tempo da função serverless e
+ * processa os vídeos mais desatualizados primeiro, então repetimos até cobrir todos.
+ */
+export const syncAllVideos = async (onProgress: (status: VideoSyncStatus) => void) => {
+    const channelId = localStorage.getItem('yt_channel_id') || (await fetchMyChannelId());
+    if (!channelId) throw new Error('Conecte o canal do YouTube antes de sincronizar.');
+
+    let processed = 0;
+    let total = 0;
+    onProgress({ total, processed, isSyncing: true });
+    for (let round = 0; round < 40; round++) {
+        const summary = await triggerSync(channelId, false);
+        total = summary.discovered;
+        processed = Math.min(total, processed + summary.processed);
+        onProgress({ total, processed, isSyncing: true });
+        if (summary.failedBatches > 0) throw new Error(`${summary.failedBatches} lote(s) falharam — veja o status da sincronização.`);
+        if (!summary.stoppedByBudget || summary.processed === 0 || processed >= total) break;
+    }
+    await triggerSync(channelId, true).catch(() => undefined); // retenção/tráfego detalhado dos top vídeos
+    onProgress({ total, processed: total, isSyncing: false });
+};
+
+const fetchMyChannelId = async (): Promise<string | null> => {
+    const token = await getAccessToken();
+    if (!token) return null;
+    const res = await fetch('https://www.googleapis.com/youtube/v3/channels?part=id&mine=true', {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json().catch(() => ({}));
+    return data.items?.[0]?.id || null;
 };

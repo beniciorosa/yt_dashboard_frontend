@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabaseClient';
 import { UserPlus, Users, Trash2, Shield, Mail, Lock, Loader2, Check, AlertCircle } from 'lucide-react';
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080' : 'https://yt-dashboard-backend.vercel.app');
+import { BACKEND_URL as API_BASE_URL, apiFetch } from '../../services/apiClient';
 
 export const UserManagement: React.FC = () => {
     const [users, setUsers] = useState<any[]>([]);
@@ -21,7 +21,7 @@ export const UserManagement: React.FC = () => {
         setLoading(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            const res = await fetch(`${API_BASE_URL}/api/auth/admin/users`, {
+            const res = await apiFetch(`${API_BASE_URL}/api/auth/admin/users`, {
                 headers: {
                     'Authorization': `Bearer ${session?.access_token}`
                 }
@@ -45,7 +45,7 @@ export const UserManagement: React.FC = () => {
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            const res = await fetch(`${API_BASE_URL}/api/auth/admin/create-user`, {
+            const res = await apiFetch(`${API_BASE_URL}/api/auth/admin/create-user`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

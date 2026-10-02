@@ -10,7 +10,7 @@ import { supabase } from '../services/supabaseClient';
 import { getAccessToken, initiateLogin } from '../services/authService';
 
 // @ts-ignore
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080' : 'https://yt-dashboard-backend.vercel.app');
+import { BACKEND_URL as API_BASE_URL, apiFetch } from '../services/apiClient';
 
 interface UTMParams {
     source: string;
@@ -194,7 +194,7 @@ export const UtmGenerator: React.FC = () => {
 
     const loadDrafts = async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/api/utm/links`);
+            const res = await apiFetch(`${API_BASE_URL}/api/utm/links`);
             if (!res.ok) return;
             const data = await res.json();
 
@@ -446,7 +446,7 @@ export const UtmGenerator: React.FC = () => {
         };
 
         try {
-            const res = await fetch(`${API_BASE_URL}/api/utm/links`, {
+            const res = await apiFetch(`${API_BASE_URL}/api/utm/links`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -464,7 +464,7 @@ export const UtmGenerator: React.FC = () => {
     const deleteSession = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         try {
-            await fetch(`${API_BASE_URL}/api/utm/links/${id}`, { method: 'DELETE' });
+            await apiFetch(`${API_BASE_URL}/api/utm/links/${id}`, { method: 'DELETE' });
             setSessions(prev => prev.filter(s => s.id !== id));
         } catch (e) { console.error("Erro ao deletar", e); }
     };
@@ -482,7 +482,7 @@ export const UtmGenerator: React.FC = () => {
         const prefix = `yt-${formattedDate}${videoId ? `-${videoId}` : ''}`;
 
         try {
-            const res = await fetch(`${API_BASE_URL}/api/utm/slug`, {
+            const res = await apiFetch(`${API_BASE_URL}/api/utm/slug`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title: title })
@@ -507,7 +507,7 @@ export const UtmGenerator: React.FC = () => {
         setIsShortening(true);
         setError(null);
         try {
-            const res = await fetch(`${API_BASE_URL}/api/utm/shorten`, {
+            const res = await apiFetch(`${API_BASE_URL}/api/utm/shorten`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -542,7 +542,7 @@ export const UtmGenerator: React.FC = () => {
                 video_url: videoUrl || null
             };
 
-            await fetch(`${API_BASE_URL}/api/utm/links`, {
+            await apiFetch(`${API_BASE_URL}/api/utm/links`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -629,7 +629,7 @@ export const UtmGenerator: React.FC = () => {
             }
 
             // Fallback to YouTube API if not in DB
-            const res = await fetch(`${API_BASE_URL}/api/youtube/proxy?endpoint=videos&part=snippet&id=${videoId}`);
+            const res = await apiFetch(`${API_BASE_URL}/api/youtube/proxy?endpoint=videos&part=snippet&id=${videoId}`);
             const data = await res.json();
             if (data.items && data.items.length > 0) {
                 const fullDesc = data.items[0].snippet.description;
@@ -667,7 +667,7 @@ export const UtmGenerator: React.FC = () => {
                 return;
             }
 
-            const res = await fetch(`${API_BASE_URL}/api/youtube/proxy-action`, {
+            const res = await apiFetch(`${API_BASE_URL}/api/youtube/proxy-action`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

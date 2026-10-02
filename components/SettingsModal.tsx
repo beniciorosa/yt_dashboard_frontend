@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Settings, Moon, Sun, LogIn, LogOut, Check, RefreshCw } from 'lucide-react';
-import { syncVideos, VideoSyncStatus } from '../services/videosService';
+import { syncAllVideos, VideoSyncStatus } from '../services/youtubeService';
 
 interface Props {
   onClose: () => void;
@@ -19,12 +19,11 @@ export const SettingsModal: React.FC<Props> = ({ onClose, isLoggedIn, onLogin, o
     setIsSyncingVideos(true);
     setSyncStatus({ total: 0, processed: 0, isSyncing: true });
     try {
-      await syncVideos((status) => {
-        setSyncStatus(status);
-        if (!status.isSyncing) setIsSyncingVideos(false);
-      });
-    } catch (e) {
+      await syncAllVideos(setSyncStatus);
+      setIsSyncingVideos(false);
+    } catch (e: any) {
       console.error(e);
+      setSyncStatus((prev) => ({ ...prev, isSyncing: false, error: e?.message || 'Falha na sincronização' }));
       setIsSyncingVideos(false);
     }
   };

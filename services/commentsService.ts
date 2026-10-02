@@ -2,7 +2,7 @@ import { getAccessToken } from './authService';
 
 const BASE_URL = 'https://www.googleapis.com/youtube/v3';
 // Use the same backend domain style as youtubeService, but targeting the new proxy-action endpoint
-const API_BASE_ROOT = (import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080' : 'https://yt-dashboard-backend.vercel.app')) + '/api';
+import { API_URL as API_BASE_ROOT, apiFetch } from './apiClient';
 const PROXY_ACTION_URL = `${API_BASE_ROOT}/youtube/proxy-action`;
 const BACKEND_API_URL = `${API_BASE_ROOT}/comments`;
 
@@ -101,7 +101,7 @@ export const fetchComments = async (
     if (params.pageToken) url.searchParams.append('pageToken', params.pageToken);
     if (params.maxResults) url.searchParams.append('maxResults', params.maxResults.toString());
 
-    const res = await fetch(url.toString(), {
+    const res = await apiFetch(url.toString(), {
         headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/json'
@@ -131,7 +131,7 @@ export const replyToComment = async (parentId: string, text: string): Promise<Re
         }
     };
 
-    const res = await fetch(PROXY_ACTION_URL, {
+    const res = await apiFetch(PROXY_ACTION_URL, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -165,7 +165,7 @@ export const deleteComment = async (commentId: string): Promise<boolean> => {
     const params = { id: commentId };
 
     try {
-        const res = await fetch(PROXY_ACTION_URL, {
+        const res = await apiFetch(PROXY_ACTION_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -178,7 +178,7 @@ export const deleteComment = async (commentId: string): Promise<boolean> => {
 
         if (!res.ok) {
             console.warn("DELETE via 'comments' failed, trying 'commentThreads'...");
-            const res2 = await fetch(PROXY_ACTION_URL, {
+            const res2 = await apiFetch(PROXY_ACTION_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -209,7 +209,7 @@ export const setCommentModerationStatus = async (commentId: string, status: 'hel
     const token = await getAccessToken();
     if (!token) throw new Error("Authentication required");
 
-    const res = await fetch(PROXY_ACTION_URL, {
+    const res = await apiFetch(PROXY_ACTION_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -238,7 +238,7 @@ export const getMyChannelId = async (): Promise<string> => {
     const token = await getAccessToken();
     if (!token) throw new Error("Authentication required");
 
-    const res = await fetch(`${BASE_URL}/channels?part=id&mine=true`, {
+    const res = await apiFetch(`${BASE_URL}/channels?part=id&mine=true`, {
         headers: {
             'Authorization': `Bearer ${token}`
         }
@@ -260,7 +260,7 @@ export const rateComment = async (commentId: string, rating: 'like' | 'none'): P
     const endpoint = 'comments/rate';
     const params = { id: commentId, rating: rating };
 
-    const res = await fetch(PROXY_ACTION_URL, {
+    const res = await apiFetch(PROXY_ACTION_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -283,7 +283,7 @@ export const rateComment = async (commentId: string, rating: 'like' | 'none'): P
 
 export const generateAiReply = async (commentText: string, videoTitle?: string, style: string = 'professional', authorName?: string, provider: 'openai' | 'gemini' = 'openai'): Promise<string> => {
     try {
-        const res = await fetch(`${BACKEND_API_URL}/generate-reply`, {
+        const res = await apiFetch(`${BACKEND_API_URL}/generate-reply`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ commentText, videoTitle, style, authorName, provider })
@@ -308,7 +308,7 @@ export interface QuickReply {
 
 export const fetchQuickReplies = async (): Promise<QuickReply[]> => {
     try {
-        const res = await fetch(`${BACKEND_API_URL}/quick-replies`);
+        const res = await apiFetch(`${BACKEND_API_URL}/quick-replies`);
         if (!res.ok) throw new Error("Failed to fetch quick replies");
         return await res.json();
     } catch (error) {
@@ -318,7 +318,7 @@ export const fetchQuickReplies = async (): Promise<QuickReply[]> => {
 };
 
 export const createQuickReply = async (title: string, text: string): Promise<QuickReply[]> => {
-    const res = await fetch(`${BACKEND_API_URL}/quick-replies`, {
+    const res = await apiFetch(`${BACKEND_API_URL}/quick-replies`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, text })
@@ -328,7 +328,7 @@ export const createQuickReply = async (title: string, text: string): Promise<Qui
 };
 
 export const deleteQuickReply = async (id: string): Promise<boolean> => {
-    const res = await fetch(`${BACKEND_API_URL}/quick-replies/${id}`, {
+    const res = await apiFetch(`${BACKEND_API_URL}/quick-replies/${id}`, {
         method: 'DELETE'
     });
     if (!res.ok) throw new Error("Failed to delete quick reply");
@@ -338,7 +338,7 @@ export const deleteQuickReply = async (id: string): Promise<boolean> => {
 export const learnReply = async (commentText: string, replyText: string, username?: string): Promise<void> => {
     // Fire and forget learning, but we log errors
     try {
-        await fetch(`${BACKEND_API_URL}/learn`, {
+        await apiFetch(`${BACKEND_API_URL}/learn`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ commentText, replyText, username })
@@ -352,7 +352,7 @@ export const fetchInteractionCount = async (username: string): Promise<number> =
     if (!username) return 0;
     try {
         // Encode username component to handle special chars properly
-        const res = await fetch(`${BACKEND_API_URL}/interactions/${encodeURIComponent(username)}`);
+        const res = await apiFetch(`${BACKEND_API_URL}/interactions/${encodeURIComponent(username)}`);
         if (!res.ok) return 0;
         const data = await res.json();
         return data.count || 0;
@@ -388,7 +388,7 @@ export interface FavoriteComment {
 
 export const fetchTopCommenters = async (): Promise<TopCommenter[]> => {
     try {
-        const res = await fetch(`${BACKEND_API_URL}/top-commenters`);
+        const res = await apiFetch(`${BACKEND_API_URL}/top-commenters`);
         if (!res.ok) throw new Error("Failed to fetch top commenters");
         return await res.json();
     } catch (error) {
@@ -399,7 +399,7 @@ export const fetchTopCommenters = async (): Promise<TopCommenter[]> => {
 
 export const fetchUserHistory = async (username: string): Promise<CommentHistoryEntry[]> => {
     try {
-        const res = await fetch(`${BACKEND_API_URL}/history/${encodeURIComponent(username)}`);
+        const res = await apiFetch(`${BACKEND_API_URL}/history/${encodeURIComponent(username)}`);
         if (!res.ok) throw new Error("Failed to fetch user history");
         return await res.json();
     } catch (error) {
@@ -410,7 +410,7 @@ export const fetchUserHistory = async (username: string): Promise<CommentHistory
 
 export const fetchFavorites = async (): Promise<FavoriteComment[]> => {
     try {
-        const res = await fetch(`${BACKEND_API_URL}/favorites`);
+        const res = await apiFetch(`${BACKEND_API_URL}/favorites`);
         if (!res.ok) throw new Error("Failed to fetch favorites");
         return await res.json();
     } catch (error) {
@@ -421,7 +421,7 @@ export const fetchFavorites = async (): Promise<FavoriteComment[]> => {
 
 export const toggleFavorite = async (commentData: any): Promise<{ favorited: boolean }> => {
     try {
-        const res = await fetch(`${BACKEND_API_URL}/favorites/toggle`, {
+        const res = await apiFetch(`${BACKEND_API_URL}/favorites/toggle`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(commentData)

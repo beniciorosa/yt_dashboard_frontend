@@ -11,7 +11,7 @@ import { SalesModule } from './components/SalesMetrics/SalesModule';
 import { UserManagement } from './components/Admin/UserManagement';
 import { GeniusDashboard } from './components/Genius/GeniusDashboard';
 import { Login } from './components/Login';
-import { handleAuthCallback, initiateLogin, logout, isAuthenticated, getAccessToken, saveSession } from './services/authService';
+import { handleAuthCallback, initiateLogin, isAuthenticated, getAccessToken, saveSession } from './services/authService';
 import { supabase } from './services/supabaseClient';
 import { Loader2 } from 'lucide-react';
 

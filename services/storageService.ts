@@ -354,33 +354,3 @@ export const deleteCompetitor = async (competitorId: string) => {
     throw error;
   }
 };
-
-export const verifyUserAccess = async (userId: string, email: string): Promise<boolean> => {
-  try {
-    // Init temp client for auth check using keys from SupabaseAdm configuration
-    // Init temp client for auth check using keys from SupabaseAdm configuration
-    const authClient = createClient(
-      'https://qytuhvqggsleohxndtqz.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5dHVodnFnZ3NsZW9oeG5kdHF6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzcwODIxNSwiZXhwIjoyMDc5Mjg0MjE1fQ.5liB1hAHSCezVFRQvlIL7rnPfMrVQKv17dte09bXzb4',
-      { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
-    );
-
-    // Try to find the user by UUID and email in a 'users' table
-    const { data, error } = await authClient
-      .from('users')
-      .select('id')
-      .eq('id', userId)
-      .eq('email', email)
-      .maybeSingle();
-
-    if (error) {
-      console.warn("Auth verify error (ignoring if just missing row):", error);
-    }
-
-    // If row found, access granted
-    return !!data;
-  } catch (e) {
-    console.error("Auth verification failed", e);
-    return false;
-  }
-};

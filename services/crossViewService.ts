@@ -1,4 +1,5 @@
 import { API_BASE_URL } from './salesMetricsService';
+import { apiFetch } from './apiClient';
 
 export interface CvModel {
   id: string;
@@ -130,7 +131,7 @@ export interface CvVideoMeta {
 
 export const fetchCvModels = async (): Promise<CvModelsResponse | null> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/cross-view/models`);
+    const res = await apiFetch(`${API_BASE_URL}/api/cross-view/models`);
     if (!res.ok) throw new Error('Falha ao carregar modelos');
     return await res.json();
   } catch (e) {
@@ -141,7 +142,7 @@ export const fetchCvModels = async (): Promise<CvModelsResponse | null> => {
 
 export const estimateCv = async (videoIds: string[], model: string): Promise<CvEstimate | null> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/cross-view/estimate`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/cross-view/estimate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ videoIds, model }),
@@ -156,7 +157,7 @@ export const estimateCv = async (videoIds: string[], model: string): Promise<CvE
 
 export const cvStatus = async (videoIds: string[]): Promise<CvStatusItem[]> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/cross-view/status?videoIds=${encodeURIComponent(videoIds.join(','))}`);
+    const res = await apiFetch(`${API_BASE_URL}/api/cross-view/status?videoIds=${encodeURIComponent(videoIds.join(','))}`);
     if (!res.ok) throw new Error('Falha no status');
     const json = await res.json();
     return json.items || [];
@@ -169,7 +170,7 @@ export const cvStatus = async (videoIds: string[]): Promise<CvStatusItem[]> => {
 /** Extrai 1 vídeo por vez (respeita o limite de 60s da Vercel). */
 export const extractCvOne = async (videoId: string, force = false): Promise<CvExtractItem | null> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/cross-view/extract`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/cross-view/extract`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ videoIds: [videoId], force }),
@@ -188,7 +189,7 @@ export const extractCvOne = async (videoId: string, force = false): Promise<CvEx
 
 export const setManualTranscript = async (videoId: string, transcript: string): Promise<CvExtractItem | null> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/cross-view/manual-transcript`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/cross-view/manual-transcript`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ videoId, transcript }),
@@ -203,7 +204,7 @@ export const setManualTranscript = async (videoId: string, transcript: string): 
 
 export const analyzeCv = async (videoIds: string[], model: string, force = false): Promise<CvAnalysis | null> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/cross-view/analyze`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/cross-view/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ videoIds, model, force }),
@@ -221,7 +222,7 @@ export const analyzeCv = async (videoIds: string[], model: string, force = false
 
 export const listAnalyses = async (limit = 30): Promise<CvAnalysisListItem[]> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/cross-view/analyses?limit=${limit}`);
+    const res = await apiFetch(`${API_BASE_URL}/api/cross-view/analyses?limit=${limit}`);
     if (!res.ok) throw new Error('Falha ao listar análises');
     const json = await res.json();
     return json.items || [];
@@ -235,7 +236,7 @@ export const getAnalysisById = async (
   id: number | string,
 ): Promise<{ analysis: CvAnalysis; videos: CvVideoMeta[] } | null> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/cross-view/analyses/${id}`);
+    const res = await apiFetch(`${API_BASE_URL}/api/cross-view/analyses/${id}`);
     if (!res.ok) throw new Error('Falha ao carregar análise');
     return await res.json();
   } catch (e) {
@@ -249,7 +250,7 @@ export const updateAnalysisMeta = async (
   patch: { title?: string; favorite?: boolean },
 ): Promise<boolean> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/cross-view/analyses/${id}`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/cross-view/analyses/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patch),
@@ -263,7 +264,7 @@ export const updateAnalysisMeta = async (
 
 export const deleteAnalysis = async (id: number | string): Promise<boolean> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/cross-view/analyses/${id}`, { method: 'DELETE' });
+    const res = await apiFetch(`${API_BASE_URL}/api/cross-view/analyses/${id}`, { method: 'DELETE' });
     return res.ok;
   } catch (e) {
     console.error('deleteAnalysis', e);
@@ -277,7 +278,7 @@ export const generateBrief = async (
   theme?: string,
 ): Promise<{ brief: CvBrief; brief_model: string } | null> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/cross-view/brief`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/cross-view/brief`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, model, theme }),

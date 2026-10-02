@@ -1,6 +1,7 @@
 
 // @ts-ignore
-export const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? 'http://localhost:8080' : 'https://yt-dashboard-backend.vercel.app');
+import { BACKEND_URL, apiFetch } from './apiClient';
+export const API_BASE_URL = BACKEND_URL;
 
 export interface SalesRankingItem {
     videoId: string;
@@ -80,7 +81,7 @@ export const fetchSalesAnalysis = async (p: AnalysisParams): Promise<AnalysisRes
         qs.set('periodA', p.periodA); qs.set('periodB', p.periodB); qs.set('sellerScope', p.sellerScope);
         if (p.startA) qs.set('startA', p.startA); if (p.endA) qs.set('endA', p.endA);
         if (p.startB) qs.set('startB', p.startB); if (p.endB) qs.set('endB', p.endB);
-        const res = await fetch(`${API_BASE_URL}/api/sales/analysis?${qs.toString()}`);
+        const res = await apiFetch(`${API_BASE_URL}/api/sales/analysis?${qs.toString()}`);
         if (!res.ok) throw new Error('Failed to fetch analysis');
         return await res.json();
     } catch (error) {
@@ -91,7 +92,7 @@ export const fetchSalesAnalysis = async (p: AnalysisParams): Promise<AnalysisRes
 
 export const fetchAiSummary = async (analysis: AnalysisResult): Promise<string> => {
     try {
-        const res = await fetch(`${API_BASE_URL}/api/sales/analysis/ai-summary`, {
+        const res = await apiFetch(`${API_BASE_URL}/api/sales/analysis/ai-summary`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(analysis),
@@ -118,7 +119,7 @@ export interface PromotionRoiResult {
 
 export const fetchPromotionRoi = async (): Promise<PromotionRoiResult | null> => {
     try {
-        const res = await fetch(`${API_BASE_URL}/api/sales/roi`);
+        const res = await apiFetch(`${API_BASE_URL}/api/sales/roi`);
         if (!res.ok) throw new Error('Failed to fetch ROI');
         return await res.json();
     } catch (error) {
@@ -130,7 +131,7 @@ export const fetchPromotionRoi = async (): Promise<PromotionRoiResult | null> =>
 // Sempre todo o período (ignora a data selecionada na tela)
 export const fetchTopVideos = async (limit = 5): Promise<TopVideoItem[]> => {
     try {
-        const res = await fetch(`${API_BASE_URL}/api/sales/top-videos?limit=${limit}`);
+        const res = await apiFetch(`${API_BASE_URL}/api/sales/top-videos?limit=${limit}`);
         if (!res.ok) throw new Error('Failed to fetch top videos');
         return await res.json();
     } catch (error) {
@@ -141,7 +142,7 @@ export const fetchTopVideos = async (limit = 5): Promise<TopVideoItem[]> => {
 
 export const fetchTopVendedores = async (limit = 5): Promise<TopVendedorItem[]> => {
     try {
-        const res = await fetch(`${API_BASE_URL}/api/sales/top-vendedores?limit=${limit}`);
+        const res = await apiFetch(`${API_BASE_URL}/api/sales/top-vendedores?limit=${limit}`);
         if (!res.ok) throw new Error('Failed to fetch top vendedores');
         return await res.json();
     } catch (error) {
@@ -152,7 +153,7 @@ export const fetchTopVendedores = async (limit = 5): Promise<TopVendedorItem[]> 
 
 export const fetchSalesSummary = async (): Promise<SalesSummary> => {
     try {
-        const res = await fetch(`${API_BASE_URL}/api/sales/summary`);
+        const res = await apiFetch(`${API_BASE_URL}/api/sales/summary`);
         if (!res.ok) throw new Error('Failed to fetch summary');
         return await res.json();
     } catch (error) {
@@ -163,7 +164,7 @@ export const fetchSalesSummary = async (): Promise<SalesSummary> => {
 
 export const fetchSalesRanking = async (): Promise<SalesRankingItem[]> => {
     try {
-        const res = await fetch(`${API_BASE_URL}/api/sales/ranking`);
+        const res = await apiFetch(`${API_BASE_URL}/api/sales/ranking`);
         if (!res.ok) throw new Error('Failed to fetch ranking');
         return await res.json();
     } catch (error) {
@@ -174,7 +175,7 @@ export const fetchSalesRanking = async (): Promise<SalesRankingItem[]> => {
 
 export const fetchSalesDashboardData = async (period: string = 'month', start?: string, end?: string): Promise<{ summary: SalesSummary, ranking: SalesRankingItem[] }> => {
     try {
-        const res = await fetch(`${API_BASE_URL}/api/sales/dashboard?${buildPeriodQuery(period, start, end)}`);
+        const res = await apiFetch(`${API_BASE_URL}/api/sales/dashboard?${buildPeriodQuery(period, start, end)}`);
         if (!res.ok) throw new Error('Failed to fetch dashboard data');
         return await res.json();
     } catch (error) {
@@ -188,7 +189,7 @@ export const fetchSalesDashboardData = async (period: string = 'month', start?: 
 
 export const fetchDealsByVideo = async (videoId: string, period: string = 'month', start?: string, end?: string): Promise<{ video: any, deals: any[] }> => {
     try {
-        const res = await fetch(`${API_BASE_URL}/api/sales/${videoId}?${buildPeriodQuery(period, start, end)}`);
+        const res = await apiFetch(`${API_BASE_URL}/api/sales/${videoId}?${buildPeriodQuery(period, start, end)}`);
         if (!res.ok) throw new Error('Failed to fetch deals');
         return await res.json();
     } catch (error) {
