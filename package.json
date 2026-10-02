@@ -10,26 +10,23 @@
     "go": "git add . && git commit -m \"auto front\" && git push origin main && cd ../yt_dashboard_backend && git add . && git commit -m \"auto back\" && git push origin main"
   },
   "dependencies": {
-    "@google/genai": "^1.31.0",
     "@googlemaps/js-api-loader": "^2.0.2",
     "@supabase/supabase-js": "^2.45.0",
+    "@tanstack/react-query": "^5.104.1",
     "chart.js": "^4.5.1",
-    "cors": "^2.8.5",
-    "express": "^5.2.1",
     "lucide-react": "^0.555.0",
-    "node-fetch": "^3.3.2",
-    "openai": "^6.10.0",
-    "path": "^0.12.7",
     "react": "^19.2.1",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.1",
-    "recharts": "^3.5.1",
-    "url": "^0.11.4"
+    "react-router-dom": "^7.18.4",
+    "recharts": "^3.5.1"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "@types/google.maps": "^3.58.1",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "tailwindcss": "^4.3.3",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

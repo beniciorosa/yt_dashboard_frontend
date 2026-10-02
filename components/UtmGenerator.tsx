@@ -7,7 +7,6 @@ import {
     ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
-import { getAccessToken, initiateLogin } from '../services/authService';
 
 // @ts-ignore
 import { BACKEND_URL as API_BASE_URL, apiFetch } from '../services/apiClient';
@@ -650,47 +649,17 @@ export const UtmGenerator: React.FC = () => {
         setIsSavingDescription(true);
         setError(null);
         try {
-            // 1. Update Supabase
-            const { error: supabaseError } = await supabase
-                .from('yt_myvideos')
-                .update({ description })
-                .eq('video_id', videoId);
-
-            if (supabaseError) throw supabaseError;
-
-            // 2. Update YouTube (if token available or after login)
-            const token = await getAccessToken();
-            if (!token) {
-                // If not authenticated, we could trigger login or just warn
-                // But user wants a redirect ONLY if clicking save and not logged in
-                initiateLogin();
-                return;
-            }
-
-            const res = await apiFetch(`${API_BASE_URL}/api/youtube/proxy-action`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    token: token,
-                    method: 'PUT',
-                    endpoint: 'videos',
-                    params: { part: 'snippet' },
-                    data: {
-                        id: videoId,
-                        snippet: {
-                            title: title, // YouTube requires title in snippet for update
-                            categoryId: videoCategoryId,
-                            description: description
-                        }
-                    }
-                })
+            // O backend lê o snippet atual e troca só a descrição (preserva título, tags e idioma),
+            // e só grava no banco depois que o YouTube confirma.
+            const res = await apiFetch(`${API_BASE_URL}/api/youtube/videos/${videoId}/description`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ description }),
             });
 
             if (!res.ok) {
-                const errData = await res.json();
-                throw new Error(errData.message || "Falha ao atualizar no YouTube");
+                const errData = await res.json().catch(() => null);
+                throw new Error(errData?.message || "Falha ao atualizar no YouTube");
             }
 
             // 3. Sincronização LOCAL: Atualiza a memória do app para não precisar clicar em Sincronizar
