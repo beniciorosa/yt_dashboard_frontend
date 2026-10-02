@@ -19,6 +19,10 @@ export interface SessionValue {
     setTheme: (t: Theme) => void;
 }
 
+// Código devolvido pelo consentimento do Google (?code=...), lido no carregamento do módulo:
+// o roteador redireciona "/" para a tela inicial e descarta a query antes dos efeitos rodarem.
+const initialOAuthCode = new URLSearchParams(window.location.search).get('code');
+
 export const SessionContext = createContext<SessionValue | null>(null);
 
 export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -64,12 +68,11 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         oauthChecked.current = true;
 
         (async () => {
-            const code = new URLSearchParams(window.location.search).get('code');
+            const code = initialOAuthCode;
             if (!code) {
                 setYoutubeConnected(isAuthenticated());
                 return;
             }
-            window.history.replaceState({}, document.title, window.location.pathname);
             if (await getAccessToken()) {
                 setYoutubeConnected(true);
                 return;
