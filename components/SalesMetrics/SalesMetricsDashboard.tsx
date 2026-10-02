@@ -86,7 +86,7 @@ export const SalesMetricsDashboard: React.FC = () => {
                 <Icon size={64} />
             </div>
             <div className="flex items-center gap-3 mb-4 z-10">
-                <div className={`p-2 rounded-lg bg-opacity-10 ${colorClass.replace('text-', 'bg-')} ${colorClass}`}>
+                <div className={`p-2 rounded-lg bg-surface-2 ${colorClass}`}>
                     <Icon size={20} />
                 </div>
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</h3>

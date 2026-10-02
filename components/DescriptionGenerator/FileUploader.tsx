@@ -90,7 +90,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelected, isTranscrib
                 {!isTranscribing && !isLoading && (
                     <button
                         onClick={clearFile}
-                        className="p-2 hover:bg-blue-100 dark:hover:bg-blue-800/50 rounded-full text-blue-500 dark:text-blue-400 transition-colors flex-shrink-0"
+                        className="p-2 hover:bg-blue-100 dark:hover:bg-blue-800/50 rounded-full text-blue-500 dark:text-blue-400 transition-colors shrink-0"
                         title="Remover arquivo"
                     >
                         <X size={20} />

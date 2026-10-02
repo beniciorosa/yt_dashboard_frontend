@@ -20,7 +20,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md overflow-hidden transform transition-all scale-100 border border-slate-100 dark:border-slate-700">
                 <div className="p-6">
                     <div className="flex items-start gap-4">
-                        <div className={`p-3 rounded-full flex-shrink-0 ${isDestructive
+                        <div className={`p-3 rounded-full shrink-0 ${isDestructive
                                 ? 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'
                                 : 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'
                             }`}>

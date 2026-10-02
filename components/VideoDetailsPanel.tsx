@@ -174,7 +174,7 @@ export const VideoDetailsPanel: React.FC<VideoDetailsPanelProps> = ({ video, isO
                 <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 sticky top-0 z-10">
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex gap-4">
-                            <div className="w-24 h-16 rounded overflow-hidden flex-shrink-0 bg-slate-200 dark:bg-slate-700">
+                            <div className="w-24 h-16 rounded overflow-hidden shrink-0 bg-slate-200 dark:bg-slate-700">
                                 <img src={video.thumbnail} alt="" className="w-full h-full object-cover" />
                             </div>
                             <div>
@@ -228,7 +228,7 @@ export const VideoDetailsPanel: React.FC<VideoDetailsPanelProps> = ({ video, isO
                     </div>
                 </div>
 
-                <div className="p-6 flex-grow bg-slate-50 dark:bg-slate-900/50">
+                <div className="p-6 grow bg-slate-50 dark:bg-slate-900/50">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center h-64 text-slate-500 dark:text-slate-400">
                             <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-2"></div>

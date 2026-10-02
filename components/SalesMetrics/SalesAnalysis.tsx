@@ -105,7 +105,7 @@ export const SalesAnalysis: React.FC = () => {
     const KpiCard = ({ title, icon: Icon, color, aVal, bVal, delta, deltaSuffix = '%', invert = false }: any) => (
         <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="flex items-center gap-2 mb-3">
-                <div className={`p-1.5 rounded-lg ${color} bg-opacity-10`}><Icon size={16} className={color} /></div>
+                <div className={`p-1.5 rounded-lg bg-surface-2`}><Icon size={16} className={color} /></div>
                 <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400">{title}</h3>
             </div>
             <div className="flex items-end justify-between gap-2">

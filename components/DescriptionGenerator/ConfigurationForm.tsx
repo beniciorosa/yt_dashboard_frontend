@@ -224,7 +224,7 @@ const PresetManager: React.FC<PresetManagerProps> = ({
                         </span>
                     </div>
 
-                    <div className="flex items-center gap-1 flex-shrink-0">
+                    <div className="flex items-center gap-1 shrink-0">
                         <button
                             onClick={handleUpdate}
                             disabled={loading}
@@ -334,7 +334,7 @@ const ConfigurationForm: React.FC<ConfigurationFormProps> = ({ config, onChange 
                     value={config.videoTitle}
                     onChange={(e) => updateField('videoTitle', e.target.value)}
                     placeholder="Ex: Como vender no Mercado Livre em 2026 começando do zero"
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-slate-400 dark:placeholder-slate-500"
+                    className="w-full px-4 py-3 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
             </div>
 
@@ -343,7 +343,7 @@ const ConfigurationForm: React.FC<ConfigurationFormProps> = ({ config, onChange 
             {/* Section: CTA */}
             <div className="space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                    <div className="flex-grow">
+                    <div className="grow">
                         <h3 className="text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2">
                             <MessageCircle size={20} className="text-green-600 dark:text-green-500" />
                             2. Chamada para Ação (CTA)
@@ -401,14 +401,14 @@ const ConfigurationForm: React.FC<ConfigurationFormProps> = ({ config, onChange 
                         value={config.ctaText}
                         onChange={(e) => updateField('ctaText', e.target.value)}
                         placeholder="Texto da chamada (Ex: Inscreva-se na Masterclass)"
-                        className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none placeholder-slate-400 dark:placeholder-slate-500"
+                        className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     />
                     <input
                         type="text"
                         value={config.ctaUrl}
                         onChange={(e) => updateField('ctaUrl', e.target.value)}
                         placeholder="Link do CTA (https://...)"
-                        className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono placeholder-slate-400 dark:placeholder-slate-500"
+                        className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     />
                 </div>
             </div>
@@ -472,7 +472,7 @@ const ConfigurationForm: React.FC<ConfigurationFormProps> = ({ config, onChange 
                         const Icon = getSocialIcon(social.network);
                         return (
                             <div key={social.id} className="flex items-center gap-3">
-                                <div className="w-8 h-8 flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded-full text-slate-600 dark:text-slate-300 flex-shrink-0">
+                                <div className="w-8 h-8 flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded-full text-slate-600 dark:text-slate-300 shrink-0">
                                     <Icon size={16} />
                                 </div>
                                 <input
@@ -480,7 +480,7 @@ const ConfigurationForm: React.FC<ConfigurationFormProps> = ({ config, onChange 
                                     value={social.url}
                                     onChange={(e) => updateSocialUrl(social.id, e.target.value)}
                                     placeholder={getSocialPlaceholder(social.network)}
-                                    className="flex-grow px-4 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm placeholder-slate-400 dark:placeholder-slate-500"
+                                    className="grow px-4 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500"
                                 />
                             </div>
                         );
@@ -538,20 +538,20 @@ const ConfigurationForm: React.FC<ConfigurationFormProps> = ({ config, onChange 
                 <div className="space-y-3">
                     {config.links.map((link) => (
                         <div key={link.id} className="flex flex-col sm:flex-row gap-3 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
-                            <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="grow grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <input
                                     type="text"
                                     value={link.title}
                                     onChange={(e) => updateLink(link.id, 'title', e.target.value)}
                                     placeholder="Título (Ex: Meu Curso)"
-                                    className="px-3 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none placeholder-slate-400 dark:placeholder-slate-500"
+                                    className="px-3 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
                                 />
                                 <input
                                     type="text"
                                     value={link.url}
                                     onChange={(e) => updateLink(link.id, 'url', e.target.value)}
                                     placeholder="URL (https://...)"
-                                    className="px-3 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none font-mono placeholder-slate-400 dark:placeholder-slate-500"
+                                    className="px-3 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-md text-sm focus:ring-1 focus:ring-blue-500 outline-none font-mono placeholder:text-slate-400 dark:placeholder:text-slate-500"
                                 />
                             </div>
                             <div className="flex items-center gap-2">

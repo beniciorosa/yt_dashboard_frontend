@@ -46,7 +46,7 @@ const DescriptionResult: React.FC<DescriptionResultProps> = ({ text, data, onTex
         <div className="w-full flex flex-col lg:flex-row gap-6 h-full max-h-[800px]">
 
             {/* Main Content - Editable Description */}
-            <div className="flex-grow bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col transition-colors">
+            <div className="grow bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col transition-colors">
                 <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-center justify-between sticky top-0 z-10">
                     <div className="flex items-center gap-2">
                         <FileText className="text-slate-500 dark:text-slate-400 w-5 h-5" />
@@ -77,7 +77,7 @@ const DescriptionResult: React.FC<DescriptionResultProps> = ({ text, data, onTex
                 <textarea
                     value={editableText}
                     onChange={handleTextChange}
-                    className="flex-grow p-6 bg-white dark:bg-slate-800 font-mono text-sm leading-relaxed text-slate-800 dark:text-slate-300 resize-none outline-none focus:ring-2 focus:ring-inset focus:ring-green-500/20 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700"
+                    className="grow p-6 bg-white dark:bg-slate-800 font-mono text-sm leading-relaxed text-slate-800 dark:text-slate-300 resize-none outline-none focus:ring-2 focus:ring-inset focus:ring-green-500/20 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700"
                     spellCheck={false}
                 />
 
@@ -120,7 +120,7 @@ const DescriptionResult: React.FC<DescriptionResultProps> = ({ text, data, onTex
 
             {/* Sidebar - Rationale (New Style) */}
             {(data?.description_rationale || data?.chapters_rationale) && (
-                <div className="w-full lg:w-80 flex-shrink-0 space-y-4 animate-in slide-in-from-right-4">
+                <div className="w-full lg:w-80 shrink-0 space-y-4 animate-in slide-in-from-right-4">
                     <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 p-6 rounded-xl border border-purple-100 dark:border-purple-800 shadow-sm">
                         <h3 className="text-purple-900 dark:text-purple-300 font-semibold mb-4 flex items-center gap-2">
                             <BrainCircuit size={20} /> Insights do Algoritmo

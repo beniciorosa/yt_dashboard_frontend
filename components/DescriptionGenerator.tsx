@@ -325,7 +325,7 @@ export const DescriptionGenerator: React.FC = () => {
         onLoadProject={handleLoadProject}
       />
 
-      <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-4xl mx-auto space-y-8">
 
           {step === 1 && (
@@ -406,7 +406,7 @@ export const DescriptionGenerator: React.FC = () => {
 
               {error && !isProcessing && (
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 text-red-800 dark:text-red-300 rounded-lg flex items-start gap-3 max-w-2xl mx-auto">
-                  <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                  <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
                   <div className="text-sm font-medium">{error}</div>
                 </div>
               )}
@@ -506,7 +506,7 @@ export const DescriptionGenerator: React.FC = () => {
 
               {error && (
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 text-red-800 dark:text-red-300 rounded-lg flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                  <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
                   <div className="text-sm font-medium">{error}</div>
                 </div>
               )}
