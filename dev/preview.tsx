@@ -12,6 +12,7 @@ import { ClosersPage } from '../pages/ClosersPage';
 import { AttributionPage } from '../pages/AttributionPage';
 import { VideoTypesPage } from '../pages/VideoTypesPage';
 import { SalesPage } from '../pages/SalesPage';
+import { MobileSalesPage } from '../pages/mobile/MobileSalesPage';
 import { BACKEND_URL } from '../services/apiClient';
 import '../styles/app.css';
 
@@ -78,6 +79,7 @@ const FIXTURES: Record<string, (url: URL) => unknown> = {
     '/api/attribution/videos': () => TITLES.map((t, i) => video(i + 10, t)),
     '/api/closers': (url) => ({ scope: url.searchParams.get('scope'), ...stats(url.searchParams.get('scope') === 'all' ? 3.1 : (url.searchParams.get('end') || '') < new Date().toISOString().slice(0, 10) ? 0.86 : 1) }),
     '/api/closers/matrix': matrix,
+    '/api/closers/recent-wins': () => Array.from({ length: 8 }, (_, i) => ({ dealId: i, customer: ['Marcos Vinícius', 'Patrícia S.', 'Lucas Z.', 'Renata O.', 'Felipe A.', 'Juliana M.', 'Carlos E.', 'Ana B.'][i], ownerName: CLOSERS[i % 6].ownerName, amount: [10000, 8700, 8000, 12000, 6500, 8000, 10500, 5000][i], closedOn: `2026-10-0${5 - (i % 5)}`, products: ['Mentoria Meli Starter'], source: i % 3 === 0 ? 'youtube' : 'outro' })),
     '/api/sales/dashboard': (url) => {
         const f = (url.searchParams.get('start') || '') < '2026-09-07' ? 0.7 : 1;
         const ranking = TITLES.map((t, i) => ({ videoId: `v${i}`, videoTitle: t, thumbnailUrl: thumb(i + 20), totalRevenue: Math.round((90000 - i * 11000) * f), dealsCount: 40 - i * 4, wonCount: Math.round((9 - i) * f), wonToday: i === 1 ? 2 : 0, lostCount: 20 - i * 2, conversionRate: ((9 - i) / (40 - i * 4)) * 100, products: ['Mentoria Meli Starter', 'Mentoria Meli PRO', 'Metrify X', 'Treinamento'].slice(0, (i % 4) + 1) }));
@@ -136,6 +138,7 @@ const Preview: React.FC = () => {
                     <PeriodProvider>
                         <ToastProvider>
                             <Routes>
+                                <Route path="/m/vendas" element={<MobileSalesPage />} />
                                 <Route element={<AppShell />}>
                                     <Route path="/receita/closers" element={<ClosersPage />} />
                                     <Route path="/receita/atribuicao" element={<AttributionPage />} />

@@ -21,6 +21,7 @@ import { GeniusDashboard } from './components/Genius/GeniusDashboard';
 import { ClosersPage } from './pages/ClosersPage';
 import { AttributionPage } from './pages/AttributionPage';
 import { VideoTypesPage } from './pages/VideoTypesPage';
+import { MobileSalesPage } from './pages/mobile/MobileSalesPage';
 
 const FullScreenLoader: React.FC<{ label: string }> = ({ label }) => (
     <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-canvas text-fg-muted">
@@ -38,6 +39,8 @@ const AppRoutes: React.FC = () => {
 
     return (
         <Routes>
+            {/* app móvel de vendas: sem a casca do painel, salvo na tela inicial do celular */}
+            <Route path="/m/vendas" element={<MobileSalesPage />} />
             <Route element={<AppShell />}>
                 <Route path="/canal" element={<ChannelDashboard isLoggedIn={youtubeConnected} />} />
                 <Route path="/canal/tipos" element={<VideoTypesPage />} />
