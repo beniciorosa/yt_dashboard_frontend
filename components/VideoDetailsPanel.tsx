@@ -168,7 +168,7 @@ export const VideoDetailsPanel: React.FC<VideoDetailsPanelProps> = ({ video, isO
                 onClick={onClose}
             ></div>
 
-            <div className="w-full max-w-2xl h-full bg-white dark:bg-slate-800 shadow-2xl pointer-events-auto overflow-y-auto transform transition-transform animate-in slide-in-from-right duration-300 flex flex-col">
+            <div className="relative w-full max-w-2xl h-full bg-white dark:bg-slate-800 shadow-2xl pointer-events-auto overflow-y-auto animate-in slide-in-from-right duration-300 flex flex-col">
 
                 {/* Header */}
                 <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 sticky top-0 z-10">
