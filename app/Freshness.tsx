@@ -14,6 +14,7 @@ const JOB_LABELS: Record<string, string> = {
     'my-videos': 'Canal',
     competitors: 'Concorrência',
     hubspot: 'HubSpot',
+    promotions: 'Promoções',
 };
 
 const STALE_MS = 26 * 60 * 60 * 1000;
