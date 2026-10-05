@@ -79,6 +79,11 @@ export const MobileSalesPage: React.FC = () => {
     const period = useMemo(() => periodFor(preset), [preset]);
     const stats = useStats(period);
     const previous = useStats(previousPeriod(period));
+    const products = useQuery({
+        queryKey: ['closers', 'products', period.start, period.end],
+        queryFn: () => api<{ product: string; won: number; revenue: number }[]>(`/closers/products?start=${period.start}&end=${period.end}`),
+        refetchInterval: 5 * 60_000,
+    });
     const recent = useQuery({ queryKey: ['closers', 'recent-wins'], queryFn: () => api<RecentWin[]>('/closers/recent-wins?limit=25'), refetchInterval: 5 * 60_000 });
 
     useEffect(() => {
@@ -181,6 +186,30 @@ export const MobileSalesPage: React.FC = () => {
                                 {!stats.isLoading && closers.length === 0 && <li className="m-empty">Nenhuma venda no período.</li>}
                                 {stats.isLoading && [0, 1, 2].map((i) => <li key={i} className="m-skeleton" />)}
                             </ol>
+                        </section>
+
+                        <section className="m-card">
+                            <div className="m-card__head">
+                                <div className="m-card__title">Produtos</div>
+                                <div className="m-card__hint">vendas no período</div>
+                            </div>
+                            <ul className="m-list">
+                                {(products.data || []).map((pr) => {
+                                    const max = Math.max(0, ...(products.data || []).map((x) => x.revenue));
+                                    return (
+                                        <li key={pr.product} className="m-product">
+                                            <div className="m-closer__row">
+                                                <span className="m-product__name">{pr.product}</span>
+                                                <span className="m-win__amount">{fmtBRL(pr.revenue)}</span>
+                                            </div>
+                                            <div className="m-bar"><div className="m-bar__fill" style={{ width: `${max ? (pr.revenue / max) * 100 : 0}%` }} /></div>
+                                            <div className="m-closer__meta">{fmtInt(pr.won)} {pr.won === 1 ? 'venda' : 'vendas'}{pr.won ? ` · ticket ${fmtBRL(pr.revenue / pr.won)}` : ''}</div>
+                                        </li>
+                                    );
+                                })}
+                                {!products.isLoading && (products.data || []).length === 0 && <li className="m-empty">Nenhuma venda no período.</li>}
+                                {products.isLoading && [0, 1].map((i) => <li key={i} className="m-skeleton" />)}
+                            </ul>
                         </section>
 
                         <section className="m-card">

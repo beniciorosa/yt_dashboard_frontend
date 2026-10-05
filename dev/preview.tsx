@@ -79,6 +79,7 @@ const FIXTURES: Record<string, (url: URL) => unknown> = {
     '/api/attribution/videos': () => TITLES.map((t, i) => video(i + 10, t)),
     '/api/closers': (url) => ({ scope: url.searchParams.get('scope'), ...stats(url.searchParams.get('scope') === 'all' ? 3.1 : (url.searchParams.get('end') || '') < new Date().toISOString().slice(0, 10) ? 0.86 : 1) }),
     '/api/closers/matrix': matrix,
+    '/api/closers/products': () => [{ product: 'Mentoria Meli Starter', won: 31, revenue: 248000 }, { product: 'Mentoria Meli PRO', won: 6, revenue: 72000 }, { product: 'Metrify X', won: 4, revenue: 9800 }, { product: 'Treinamento Escalada Ecom', won: 2, revenue: 3000 }],
     '/api/closers/recent-wins': () => Array.from({ length: 8 }, (_, i) => ({ dealId: i, customer: ['Marcos Vinícius', 'Patrícia S.', 'Lucas Z.', 'Renata O.', 'Felipe A.', 'Juliana M.', 'Carlos E.', 'Ana B.'][i], ownerName: CLOSERS[i % 6].ownerName, amount: [10000, 8700, 8000, 12000, 6500, 8000, 10500, 5000][i], closedOn: `2026-10-0${5 - (i % 5)}`, products: ['Mentoria Meli Starter'], source: i % 3 === 0 ? 'youtube' : 'outro' })),
     '/api/sales/dashboard': (url) => {
         const f = (url.searchParams.get('start') || '') < '2026-09-07' ? 0.7 : 1;
