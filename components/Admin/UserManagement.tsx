@@ -9,6 +9,7 @@ export const UserManagement: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [role, setRole] = useState<'user' | 'admin' | 'mobile'>('user');
     const [isCreating, setIsCreating] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
@@ -51,7 +52,7 @@ export const UserManagement: React.FC = () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${session?.access_token}`
                 },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ email, password, role })
             });
 
             const result = await res.json();
@@ -171,9 +172,22 @@ export const UserManagement: React.FC = () => {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Mínimo 6 caracteres"
+                                    placeholder="Mínimo 8 caracteres"
                                 />
                             </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Acesso</label>
+                            <select
+                                value={role}
+                                onChange={(e) => setRole(e.target.value as 'user' | 'admin' | 'mobile')}
+                                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="user">Painel completo</option>
+                                <option value="mobile">Só o app de vendas (celular)</option>
+                                <option value="admin">Administrador</option>
+                            </select>
                         </div>
 
                         {error && (

@@ -37,6 +37,16 @@ const AppRoutes: React.FC = () => {
     if (!session) return <Login onLoginSuccess={() => window.location.reload()} />;
     if (connectingYoutube) return <FullScreenLoader label="Conectando o canal do YouTube…" />;
 
+    // Papel 'mobile': acesso só ao app de vendas, qualquer outra rota volta para ele.
+    if (role === 'mobile') {
+        return (
+            <Routes>
+                <Route path="/m/vendas" element={<MobileSalesPage />} />
+                <Route path="*" element={<Navigate to="/m/vendas" replace />} />
+            </Routes>
+        );
+    }
+
     return (
         <Routes>
             {/* app móvel de vendas: sem a casca do painel, salvo na tela inicial do celular */}

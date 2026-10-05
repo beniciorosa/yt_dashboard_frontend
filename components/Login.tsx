@@ -126,7 +126,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                                 const { error } = await supabase.auth.signInWithOAuth({
                                     provider: 'google',
                                     options: {
-                                        redirectTo: window.location.origin,
+                                        // volta para a mesma tela (ex.: /m/vendas no celular), não para o painel
+                                        redirectTo: window.location.href.split('?')[0],
                                         queryParams: {
                                             access_type: 'offline',
                                             prompt: 'consent',
