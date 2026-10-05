@@ -137,6 +137,8 @@
 .m-win__amount { font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .m-win__chev { color: var(--m-faint); flex-shrink: 0; }
 
+.m-more { width: 100%; height: 40px; margin: 4px 0 2px; border-radius: 12px; border: 1px solid var(--m-card-border); color: var(--m-fg); font-weight: 600; font-size: 13px; }
+
 .m-empty { padding: 16px 0; color: var(--m-muted); font-size: 13px; text-align: center; }
 .m-skeleton { height: 44px; margin: 8px 0; border-radius: 10px; background: var(--m-card-border); animation: m-pulse 1.2s ease-in-out infinite; }
 @keyframes m-pulse { 50% { opacity: 0.4; } }

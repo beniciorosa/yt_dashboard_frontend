@@ -76,6 +76,7 @@ export const MobileSalesPage: React.FC = () => {
     const qc = useQueryClient();
     const [preset, setPreset] = useState<Preset>('month');
     const [refreshing, setRefreshing] = useState(false);
+    const [showAllWins, setShowAllWins] = useState(false);
     const period = useMemo(() => periodFor(preset), [preset]);
     const stats = useStats(period);
     const previous = useStats(previousPeriod(period));
@@ -218,7 +219,7 @@ export const MobileSalesPage: React.FC = () => {
                                 <div className="m-card__hint">todas as origens</div>
                             </div>
                             <ul className="m-list">
-                                {(recent.data || []).map((w) => (
+                                {(recent.data || []).slice(0, showAllWins ? undefined : 5).map((w) => (
                                     <li key={w.dealId} className="m-win">
                                         <div className="m-avatar m-avatar--sm">{initials(w.ownerName)}</div>
                                         <div className="m-win__body">
@@ -237,6 +238,11 @@ export const MobileSalesPage: React.FC = () => {
                                 ))}
                                 {recent.isLoading && [0, 1, 2, 3].map((i) => <li key={i} className="m-skeleton" />)}
                             </ul>
+                            {(recent.data?.length || 0) > 5 && (
+                                <button className="m-more" onClick={() => setShowAllWins((v) => !v)}>
+                                    {showAllWins ? 'Mostrar menos' : `Ver mais ${fmtInt((recent.data?.length || 0) - 5)}`}
+                                </button>
+                            )}
                         </section>
                     </>
                 )}
