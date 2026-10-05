@@ -242,7 +242,7 @@ const HubspotBanner: React.FC = () => {
                         Conecte o HubSpot para ler os negócios direto da fonte (sem depender da automação) e ter reuniões
                         agendadas/realizadas e taxa de comparecimento. No HubSpot: <span className="text-fg">Configurações → Integrações → Private Apps → Criar</span>,
                         com os escopos <code className="font-mono text-xs text-fg">crm.objects.deals.read</code>, <code className="font-mono text-xs text-fg">crm.objects.owners.read</code> e{' '}
-                        <code className="font-mono text-xs text-fg">crm.objects.contacts.read</code>. Cole o token abaixo; ele fica guardado só no servidor.
+                        <code className="font-mono text-xs text-fg">crm.objects.contacts.read</code> e <code className="font-mono text-xs text-fg">e-commerce</code> (itens de linha = produtos). Cole o token abaixo; ele fica guardado só no servidor.
                     </p>
                 </div>
                 {role === 'admin' ? (
