@@ -4,7 +4,7 @@ import { PERIOD_LABELS, PeriodPreset, resolvePeriod, usePeriod } from '../../lib
 import { cn } from '../../lib/cn';
 import { Segmented } from './Tabs';
 
-const PRESETS: PeriodPreset[] = ['7d', '28d', '90d', '365d', 'all'];
+const PRESETS: PeriodPreset[] = ['7d', '28d', 'month', '90d', '365d', 'all'];
 
 /** Seletor único de período do app — todas as telas leem o mesmo valor (usePeriod). */
 export const PeriodPicker: React.FC = () => {
