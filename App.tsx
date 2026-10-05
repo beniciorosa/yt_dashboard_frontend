@@ -15,7 +15,7 @@ import { DescriptionGenerator } from './components/DescriptionGenerator';
 import { UtmGenerator } from './components/UtmGenerator';
 import { CommentsDashboard } from './components/Comments/CommentsDashboard';
 import { PromotionsModule } from './components/Promotions/PromotionsModule';
-import { SalesModule } from './components/SalesMetrics/SalesModule';
+import { SalesPage } from './pages/SalesPage';
 import { UserManagement } from './components/Admin/UserManagement';
 import { GeniusDashboard } from './components/Genius/GeniusDashboard';
 import { ClosersPage } from './pages/ClosersPage';
@@ -41,7 +41,7 @@ const AppRoutes: React.FC = () => {
             <Route element={<AppShell />}>
                 <Route path="/canal" element={<ChannelDashboard isLoggedIn={youtubeConnected} />} />
                 <Route path="/canal/tipos" element={<VideoTypesPage />} />
-                <Route path="/receita/vendas" element={<SalesModule />} />
+                <Route path="/receita/vendas" element={<SalesPage />} />
                 <Route path="/receita/closers" element={<ClosersPage />} />
                 <Route path="/receita/atribuicao" element={<AttributionPage />} />
                 <Route path="/receita/promocoes" element={<PromotionsModule />} />

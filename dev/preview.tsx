@@ -11,6 +11,7 @@ import { ToastProvider } from '../components/ui';
 import { ClosersPage } from '../pages/ClosersPage';
 import { AttributionPage } from '../pages/AttributionPage';
 import { VideoTypesPage } from '../pages/VideoTypesPage';
+import { SalesPage } from '../pages/SalesPage';
 import { BACKEND_URL } from '../services/apiClient';
 import '../styles/app.css';
 
@@ -77,6 +78,14 @@ const FIXTURES: Record<string, (url: URL) => unknown> = {
     '/api/attribution/videos': () => TITLES.map((t, i) => video(i + 10, t)),
     '/api/closers': (url) => ({ scope: url.searchParams.get('scope'), ...stats(url.searchParams.get('scope') === 'all' ? 3.1 : (url.searchParams.get('end') || '') < new Date().toISOString().slice(0, 10) ? 0.86 : 1) }),
     '/api/closers/matrix': matrix,
+    '/api/sales/dashboard': (url) => {
+        const f = (url.searchParams.get('start') || '') < '2026-09-07' ? 0.7 : 1;
+        const ranking = TITLES.map((t, i) => ({ videoId: `v${i}`, videoTitle: t, thumbnailUrl: thumb(i + 20), totalRevenue: Math.round((90000 - i * 11000) * f), dealsCount: 40 - i * 4, wonCount: Math.round((9 - i) * f), wonToday: i === 1 ? 2 : 0, lostCount: 20 - i * 2, conversionRate: ((9 - i) / (40 - i * 4)) * 100, products: ['Mentoria Meli Starter', 'Mentoria Meli PRO', 'Metrify X', 'Treinamento'].slice(0, (i % 4) + 1) }));
+        const totalRevenue = ranking.reduce((a, r) => a + r.totalRevenue, 0), totalWon = ranking.reduce((a, r) => a + r.wonCount, 0), totalDeals = ranking.reduce((a, r) => a + r.dealsCount, 0);
+        return { summary: { totalRevenue, totalDeals, totalWon, conversionRate: (totalWon / totalDeals) * 100 }, ranking };
+    },
+    '/api/sales/top-videos': () => TITLES.slice(0, 5).map((t, i) => ({ videoId: `v${i}`, videoTitle: t, thumbnailUrl: thumb(i + 20), totalRevenue: 560000 - i * 90000, wonCount: 52 - i * 8, dealsCount: 400 - i * 50 })),
+    '/api/sales/top-vendedores': () => CLOSERS.slice(0, 5).map((c) => ({ name: c.ownerName, revenue: c.revenue, wonCount: c.won, dealsCount: c.leads })),
     '/api/video-types': () => ({
         totalVideos: 1143,
         dimensions: DIMS.map((d, di) => ({
@@ -131,6 +140,7 @@ const Preview: React.FC = () => {
                                     <Route path="/receita/closers" element={<ClosersPage />} />
                                     <Route path="/receita/atribuicao" element={<AttributionPage />} />
                                     <Route path="/canal/tipos" element={<VideoTypesPage />} />
+                                    <Route path="/receita/vendas" element={<SalesPage />} />
                                     <Route path="*" element={<Navigate to="/receita/closers" replace />} />
                                 </Route>
                             </Routes>

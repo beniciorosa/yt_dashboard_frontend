@@ -30,7 +30,7 @@ export const NAV: NavGroup[] = [
     {
         label: 'Receita',
         items: [
-            { path: '/receita/vendas', label: 'Vendas', title: 'Vendas por vídeo', icon: DollarSign },
+            { path: '/receita/vendas', label: 'Vendas', title: 'Vendas por vídeo', icon: DollarSign, usesPeriod: true },
             { path: '/receita/closers', label: 'Closers', title: 'Closers', icon: Trophy, usesPeriod: true },
             { path: '/receita/atribuicao', label: 'Atribuição', title: 'Atribuição de vendas', icon: GitBranch },
             { path: '/receita/promocoes', label: 'Promoções', title: 'Promoções e ROI', icon: Megaphone },
