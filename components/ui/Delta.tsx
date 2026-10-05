@@ -16,7 +16,7 @@ export const Delta: React.FC<Props> = ({ value, invert, className }) => {
     const good = invert ? !up : up;
     const Icon = up ? ArrowUpRight : ArrowDownRight;
     return (
-        <span className={cn('inline-flex items-center gap-0.5 text-xs font-medium tabular', good ? 'text-positive' : 'text-negative', className)}>
+        <span className={cn('inline-flex items-center gap-0.5 text-xs font-medium tabular', good ? 'text-fg' : 'text-fg-subtle', className)}>
             <Icon size={12} />
             {Math.abs(value * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%
         </span>

@@ -1,5 +1,5 @@
 import {
-    BarChart3, Brain, DollarSign, FileText, GitBranch, LayoutDashboard, Link2, LucideIcon,
+    Brain, DollarSign, FileText, GitBranch, LayoutDashboard, Link2, LucideIcon,
     Megaphone, MessageSquare, Shapes, Swords, Trophy, Users,
 } from 'lucide-react';
 
@@ -61,4 +61,3 @@ export const NAV: NavGroup[] = [
 
 export const ALL_NAV_ITEMS = NAV.flatMap((g) => g.items);
 export const HOME_PATH = '/canal';
-export const BRAND_ICON = BarChart3;

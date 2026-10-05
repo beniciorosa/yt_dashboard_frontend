@@ -1,6 +1,7 @@
+import { BrandLogo } from './ui/Brand';
 import React, { useState } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { Youtube, Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
 
 interface LoginProps {
     onLoginSuccess: () => void;
@@ -35,22 +36,20 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-4 transition-colors duration-300">
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 dark:bg-blue-600/5 rounded-full blur-[100px]" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/10 dark:bg-indigo-600/5 rounded-full blur-[100px]" />
+                
+                
             </div>
 
             <div className="w-full max-w-md relative">
-                <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-800 backdrop-blur-sm">
+                <div className="bg-white dark:bg-gray-900 rounded-3xl overflow-hidden border border-gray-200 dark:border-gray-800">
                     <div className="p-8">
                         <div className="flex justify-center mb-8">
-                            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-                                <Youtube className="w-10 h-10 text-white" />
-                            </div>
+                            <BrandLogo size={30} className="[&>span]:text-[22px]" />
                         </div>
 
                         <div className="text-center mb-8">
-                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Bem-vindo</h1>
-                            <p className="text-gray-500 dark:text-gray-400">Entre na sua conta para acessar o dashboard</p>
+                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Entrar</h1>
+                            <p className="text-gray-500 dark:text-gray-400 font-light">Painel de YouTube e vendas</p>
                         </div>
 
                         {error && (
@@ -98,7 +97,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-70 disabled:active:scale-100"
+                                className="w-full bg-black text-white dark:bg-white dark:text-black font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-70 disabled:active:scale-100"
                             >
                                 {loading ? (
                                     <>

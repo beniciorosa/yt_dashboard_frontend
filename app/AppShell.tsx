@@ -47,7 +47,7 @@ export const AppShell: React.FC = () => {
 
             <div className="flex-1 flex flex-col min-w-0">
                 <header className="h-12 shrink-0 sticky top-0 z-20 flex items-center justify-between gap-4 px-5 bg-canvas/85 backdrop-blur border-b border-line">
-                    <h1 className="text-sm font-semibold text-fg truncate">{current?.title || 'Escalada'}</h1>
+                    <h1 className="text-sm font-bold text-fg truncate">{current?.title || 'Escalada'}</h1>
                     <div className="flex items-center gap-4 shrink-0">
                         <Freshness />
                         {current?.usesPeriod && <PeriodPicker />}

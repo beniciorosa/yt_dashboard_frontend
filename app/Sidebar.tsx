@@ -1,7 +1,8 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { LogOut, PanelLeftClose, PanelLeftOpen, Settings } from 'lucide-react';
-import { BRAND_ICON as BrandIcon, NAV } from './nav';
+import { NAV } from './nav';
+import { BrandLogo, BrandSymbol } from '../components/ui/Brand';
 import { useSession } from './session';
 import { cn } from '../lib/cn';
 
@@ -21,16 +22,9 @@ export const Sidebar: React.FC<Props> = ({ collapsed, onToggle, onOpenSettings }
     const { role, signOut, session } = useSession();
 
     return (
-        <aside className={cn('h-screen sticky top-0 shrink-0 flex flex-col bg-surface border-r border-line transition-[width] duration-200', collapsed ? 'w-14' : 'w-56')}>
-            <div className={cn('h-12 flex items-center border-b border-line', collapsed ? 'justify-center' : 'justify-between px-3')}>
-                {!collapsed && (
-                    <div className="flex items-center gap-2 min-w-0">
-                        <span className="h-6 w-6 rounded-md bg-accent text-accent-fg inline-flex items-center justify-center shrink-0">
-                            <BrandIcon size={14} />
-                        </span>
-                        <span className="text-sm font-semibold text-fg truncate">Escalada</span>
-                    </div>
-                )}
+        <aside className={cn('h-screen sticky top-0 shrink-0 flex flex-col bg-canvas border-r border-line transition-[width] duration-200', collapsed ? 'w-14' : 'w-56')}>
+            <div className={cn('h-12 flex items-center border-b border-line', collapsed ? 'justify-center' : 'justify-between pl-3 pr-2')}>
+                {collapsed ? <BrandSymbol size={22} className="text-fg" /> : <BrandLogo />}
                 <button onClick={onToggle} title={collapsed ? 'Expandir menu' : 'Recolher menu'} className="p-1.5 rounded text-fg-subtle hover:text-fg hover:bg-surface-2">
                     {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
                 </button>
