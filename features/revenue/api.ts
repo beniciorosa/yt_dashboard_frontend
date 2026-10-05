@@ -166,6 +166,7 @@ export const useSetOwnerRole = () => {
 
 export const useHubspotStatus = () => useQuery({ queryKey: ['hubspot', 'status'], queryFn: () => api<{ configured: boolean }>('/hubspot/status') });
 
+export const saveHubspotToken = (token: string) => post<{ configured: boolean }>('/hubspot/token', { token });
 export interface HubspotSyncSummary { deals: number; caughtUp: boolean }
 export const runHubspotSync = () => api<HubspotSyncSummary>('/hubspot/sync');
 

@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom';
 import { Info, RefreshCw, Shapes } from 'lucide-react';
 import {
     CloserMatrix, CloserRow, CloserScope, Dimension, DIMENSIONS, DIMENSION_LABELS, OwnerRole,
-    runHubspotSync, useCloserMatrix, useCloserStats, useHubspotStatus, useSetOwnerRole,
+    runHubspotSync, saveHubspotToken, useCloserMatrix, useCloserStats, useHubspotStatus, useSetOwnerRole,
 } from '../features/revenue/api';
 import { Badge, Button, Column, DataTable, EmptyState, ErrorState, KpiCard, Section, Segmented, Skeleton, Tabs, useToast } from '../components/ui';
 import { previousPeriod, usePeriod } from '../lib/period';
 import { delta, fmtBRL, fmtInt, fmtPct } from '../lib/format';
 import { useQueryClient } from '@tanstack/react-query';
+import { useSession } from '../app/session';
 import { cn } from '../lib/cn';
 
 const ROLE_LABELS: Record<OwnerRole, string> = { closer: 'Closer', sdr: 'SDR', outro: 'Outro' };
@@ -191,22 +192,24 @@ const Matrix: React.FC<{ matrix: CloserMatrix; closers: Set<string> }> = ({ matr
 const HubspotBanner: React.FC = () => {
     const toast = useToast();
     const qc = useQueryClient();
+    const { role } = useSession();
     const status = useHubspotStatus();
     const [syncing, setSyncing] = useState(false);
+    const [token, setToken] = useState('');
+    const [saving, setSaving] = useState(false);
 
     const sync = async () => {
         setSyncing(true);
         try {
             // cada chamada cabe no tempo da função; repete até alcançar o presente
             let total = 0;
-            for (let round = 0; round < 30; round++) {
+            for (let round = 0; round < 60; round++) {
                 const summary = await runHubspotSync();
                 total += summary.deals;
                 if (summary.caughtUp) break;
             }
             toast(`HubSpot sincronizado: ${fmtInt(total)} negócios atualizados.`, 'success');
-            await qc.invalidateQueries({ queryKey: ['closers'] });
-            await qc.invalidateQueries({ queryKey: ['sync-status'] });
+            await Promise.all(['closers', 'sales', 'attribution', 'sync-status'].map((k) => qc.invalidateQueries({ queryKey: [k] })));
         } catch (e: any) {
             toast(e.message, 'error');
         } finally {
@@ -214,16 +217,49 @@ const HubspotBanner: React.FC = () => {
         }
     };
 
+    const connect = async () => {
+        setSaving(true);
+        try {
+            await saveHubspotToken(token);
+            setToken('');
+            toast('HubSpot conectado. Iniciando a primeira sincronização…', 'success');
+            await qc.invalidateQueries({ queryKey: ['hubspot', 'status'] });
+            await sync();
+        } catch (e: any) {
+            toast(e.message, 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
+
     if (status.isLoading || status.error) return null;
     if (!status.data?.configured) {
         return (
-            <div className="flex items-start gap-2.5 p-3 rounded-card border border-line bg-surface text-sm text-fg-muted">
-                <Info size={16} className="text-accent mt-0.5 shrink-0" />
-                <p>
-                    Reuniões agendadas/realizadas e a taxa de comparecimento aparecem depois de ligar o sync direto do HubSpot:
-                    defina <code className="font-mono text-xs text-fg">HUBSPOT_TOKEN</code> no backend (Private App somente leitura).
-                    Até lá o ranking usa o proprietário atual de cada negócio.
-                </p>
+            <div className="w-full flex flex-col gap-3 p-4 rounded-card border border-line bg-surface text-sm text-fg-muted">
+                <div className="flex items-start gap-2.5">
+                    <Info size={16} className="text-accent mt-0.5 shrink-0" />
+                    <p>
+                        Conecte o HubSpot para ler os negócios direto da fonte (sem depender da automação) e ter reuniões
+                        agendadas/realizadas e taxa de comparecimento. No HubSpot: <span className="text-fg">Configurações → Integrações → Private Apps → Criar</span>,
+                        com os escopos <code className="font-mono text-xs text-fg">crm.objects.deals.read</code>, <code className="font-mono text-xs text-fg">crm.objects.owners.read</code> e{' '}
+                        <code className="font-mono text-xs text-fg">crm.objects.contacts.read</code>. Cole o token abaixo; ele fica guardado só no servidor.
+                    </p>
+                </div>
+                {role === 'admin' ? (
+                    <div className="flex gap-2 pl-6">
+                        <input
+                            type="password"
+                            value={token}
+                            onChange={(e) => setToken(e.target.value)}
+                            placeholder="pat-na1-…"
+                            autoComplete="off"
+                            className="flex-1 max-w-md h-9 px-3 rounded-md bg-surface-2 border border-line text-sm text-fg font-mono placeholder:text-fg-subtle"
+                        />
+                        <Button variant="primary" onClick={connect} disabled={!token.trim()} loading={saving || syncing}>Conectar e sincronizar</Button>
+                    </div>
+                ) : (
+                    <p className="pl-6 text-xs text-fg-subtle">Peça a um administrador para colar o token.</p>
+                )}
             </div>
         );
     }
