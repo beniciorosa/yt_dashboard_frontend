@@ -146,3 +146,13 @@
 .m-btn { height: 40px; padding: 0 16px; border-radius: 12px; background: #fff; color: #000; font-weight: 700; font-size: 14px; }
 .m-footer { display: flex; justify-content: space-between; align-items: center; padding: 6px 2px 0; font-size: 12px; color: var(--m-faint); }
 .m-link { color: var(--m-muted); font-size: 12px; }
+
+/* Metrify (Hotmart): bloco à parte, com borda mais forte para não se confundir com o HubSpot */
+.m-card--hotmart { border-color: rgba(255, 255, 255, 0.22); }
+.m-grid--inset { margin: 4px 0 10px; }
+.m-stat--wide { grid-column: 1 / -1; }
+.m-chart { padding: 6px 2px 2px; color: #fff; }
+.m-chart__head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.m-chart__title { font-size: 12px; font-weight: 600; color: var(--m-muted); letter-spacing: 0.04em; }
+.m-chart__legend { font-size: 11px; color: var(--m-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-chart__svg { width: 100%; height: auto; display: block; touch-action: pan-y; }

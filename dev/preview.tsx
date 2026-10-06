@@ -80,6 +80,18 @@ const FIXTURES: Record<string, (url: URL) => unknown> = {
     '/api/closers': (url) => ({ scope: url.searchParams.get('scope'), ...stats(url.searchParams.get('scope') === 'all' ? 3.1 : (url.searchParams.get('end') || '') < new Date().toISOString().slice(0, 10) ? 0.86 : 1) }),
     '/api/closers/matrix': matrix,
     '/api/closers/products': () => [{ product: 'Mentoria Meli Starter', won: 31, revenue: 248000 }, { product: 'Mentoria Meli PRO', won: 6, revenue: 72000 }, { product: 'Metrify X', won: 4, revenue: 9800 }, { product: 'Treinamento Escalada Ecom', won: 2, revenue: 3000 }],
+    '/api/hotmart/status': () => ({ configured: true }),
+    '/api/hotmart/metrics': (url) => {
+        const start = url.searchParams.get('start') || '2026-10-01', end = url.searchParams.get('end') || '2026-10-05';
+        const daily = []; let count = 0, gross = 0;
+        for (let d = new Date(`${start}T00:00:00`); ; d.setDate(d.getDate() + 1)) {
+            const iso = d.toISOString().slice(0, 10); const n = (d.getDate() * 7) % 9; const g = n * 97;
+            daily.push({ date: iso, count: n, gross: g, net: g * 0.9 }); count += n; gross += g;
+            if (iso >= end || daily.length > 60) break;
+        }
+        return { count, gross, fees: gross * 0.1, net: gross * 0.9, refunds: 2, refundedGross: 194, daily,
+            products: [{ product: 'Metrify X - Anual', count: Math.round(count * 0.6), gross: gross * 0.7, net: gross * 0.63 }, { product: 'Metrify X - Mensal', count: Math.round(count * 0.4), gross: gross * 0.3, net: gross * 0.27 }] };
+    },
     '/api/closers/recent-wins': () => Array.from({ length: 8 }, (_, i) => ({ dealId: i, customer: ['Marcos Vinícius', 'Patrícia S.', 'Lucas Z.', 'Renata O.', 'Felipe A.', 'Juliana M.', 'Carlos E.', 'Ana B.'][i], ownerName: CLOSERS[i % 6].ownerName, amount: [10000, 8700, 8000, 12000, 6500, 8000, 10500, 5000][i], closedOn: `2026-10-0${5 - (i % 5)}`, products: ['Mentoria Meli Starter'], source: i % 3 === 0 ? 'youtube' : 'outro' })),
     '/api/sales/dashboard': (url) => {
         const f = (url.searchParams.get('start') || '') < '2026-09-07' ? 0.7 : 1;

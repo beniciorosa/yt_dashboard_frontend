@@ -1,6 +1,6 @@
 import {
     Brain, DollarSign, FileText, GitBranch, LayoutDashboard, Link2, LucideIcon,
-    Megaphone, MessageSquare, Shapes, Swords, Trophy, Users,
+    Megaphone, MessageSquare, Plug, Shapes, Swords, Trophy, Users,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -55,6 +55,7 @@ export const NAV: NavGroup[] = [
         label: 'Admin',
         items: [
             { path: '/admin/usuarios', label: 'Usuários', title: 'Usuários', icon: Users, adminOnly: true },
+            { path: '/admin/integracoes', label: 'Integrações', title: 'Integrações', icon: Plug, adminOnly: true },
         ],
     },
 ];

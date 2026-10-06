@@ -22,6 +22,7 @@ import { ClosersPage } from './pages/ClosersPage';
 import { AttributionPage } from './pages/AttributionPage';
 import { VideoTypesPage } from './pages/VideoTypesPage';
 import { MobileSalesPage } from './pages/mobile/MobileSalesPage';
+import { IntegrationsPage } from './pages/IntegrationsPage';
 
 const FullScreenLoader: React.FC<{ label: string }> = ({ label }) => (
     <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-canvas text-fg-muted">
@@ -64,6 +65,7 @@ const AppRoutes: React.FC = () => {
                 <Route path="/estudio/genius" element={<GeniusDashboard />} />
                 <Route path="/mercado/concorrencia" element={<CompetitorsModule />} />
                 {role === 'admin' && <Route path="/admin/usuarios" element={<UserManagement />} />}
+                {role === 'admin' && <Route path="/admin/integracoes" element={<IntegrationsPage />} />}
                 <Route path="*" element={<Navigate to={HOME_PATH} replace />} />
             </Route>
         </Routes>

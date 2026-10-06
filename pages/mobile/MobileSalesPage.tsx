@@ -7,6 +7,7 @@ import { CloserRow, CloserStats } from '../../features/revenue/api';
 import { useSession } from '../../app/session';
 import { delta, fmtBRL, fmtInt, fmtPct, fmtRelative } from '../../lib/format';
 import { cn } from '../../lib/cn';
+import { MetrifySection } from './MetrifySection';
 import './mobile.css';
 
 // ---------- marca (manual de identidade: preto/branco, Montserrat, símbolo de progresso) ----------
@@ -212,6 +213,8 @@ export const MobileSalesPage: React.FC = () => {
                                 {products.isLoading && [0, 1].map((i) => <li key={i} className="m-skeleton" />)}
                             </ul>
                         </section>
+
+                        <MetrifySection period={period} periodLabel={PRESETS.find((x) => x.id === preset)?.label.toLowerCase() || ''} />
 
                         <section className="m-card">
                             <div className="m-card__head">

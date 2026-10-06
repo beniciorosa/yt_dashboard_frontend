@@ -15,6 +15,7 @@ const JOB_LABELS: Record<string, string> = {
     competitors: 'Concorrência',
     hubspot: 'HubSpot',
     promotions: 'Promoções',
+    hotmart: 'Hotmart',
 };
 
 const STALE_MS = 26 * 60 * 60 * 1000;
